@@ -1,14 +1,15 @@
-import { 
-  fetchKIndex, 
-  getKIndexDescription, 
-  getKIndexColor 
+import {
+  fetchKIndex,
+  getKIndexDescription,
+  getKIndexColor
 } from '@/lib/noaa';
-import { 
-  calculateFamilyResonance, 
-  getZodiacSign, 
+import {
+  calculateFamilyResonance,
+  getZodiacSign,
   getMetricLabel,
-  type FamilyMember 
+  type FamilyMember
 } from '@/lib/HelioEngine';
+import { CommandConsole } from '@/components/CommandConsole';
 
 // Sample family data for demonstration
 const DEMO_FAMILY: FamilyMember[] = [
@@ -207,14 +208,21 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* Command Console - System Dynamics Layer */}
+        <CommandConsole
+          kIndex={noaaData.latest.kpIndex}
+          yearElement="Fire" // 2026 Fire Horse Year
+        />
+
         {/* Footer */}
         <footer className="text-center text-xs text-gray-500 pt-8 pb-4">
           <p>
-            HelioMetric v0.1.0 • AGPL-3.0 License • 
+            HelioMetric v0.2.0 • AGPL-3.0 License •
             Data: NOAA Space Weather Prediction Center
           </p>
           <p className="mt-1">
-            Heliospheric correlation framework using Wu Xing elemental theory
+            Heliospheric correlation framework using Wu Xing elemental theory •
+            System Dynamics Engine Active
           </p>
         </footer>
       </div>
