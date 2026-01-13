@@ -4,6 +4,9 @@ import React, { useMemo } from 'react';
 import { SystemStateProvider, useSystemState, useTemporalState } from '@/context/SystemState';
 import { TimeControl } from './TimeControl';
 import { CommandConsole } from './CommandConsole';
+import { TacticalDeck } from './TacticalDeck';
+import { MarketSensor } from './MarketSensor';
+import { LocationSensor } from './LocationSensor';
 import {
   calculateFamilyResonance,
   getMetricLabel,
@@ -73,6 +76,18 @@ function DashboardContent({ kIndex, kIndexTimestamp }: DashboardClientProps) {
         kIndex={kIndex}
         yearElement={temporalState.yearElement}
       />
+
+      {/* Tactical Deck - Protocol Cards */}
+      <TacticalDeck kIndex={kIndex} />
+
+      {/* Sensor Grid - Market & Location Analysis */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <MarketSensor
+          yearElement={temporalState.yearElement}
+          kIndex={kIndex}
+        />
+        <LocationSensor kIndex={kIndex} />
+      </div>
     </>
   );
 }

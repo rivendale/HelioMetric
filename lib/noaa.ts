@@ -1,7 +1,8 @@
 /**
  * NOAA Space Weather K-Index API Integration
  * Fetches real-time geomagnetic activity data using standard fetch (Node.js runtime)
- * 
+ * Now with Redis caching for improved performance
+ *
  * K-Index Scale (0-9):
  * 0-4: Quiet to unsettled
  * 5: Minor storm
@@ -10,6 +11,8 @@
  * 8: Severe storm
  * 9: Extreme storm
  */
+
+import { getOrCompute, CacheKeys, CacheTTL } from './redis';
 
 export interface KIndexReading {
   timeTag: string; // ISO 8601 timestamp
@@ -28,8 +31,20 @@ export interface NOAASpaceWeatherData {
 /**
  * Fetch current K-Index from NOAA SWPC JSON API
  * Uses the 3-day K-Index forecast/observation endpoint
+ * Results are cached in Redis for 5 minutes
  */
 export async function fetchKIndex(): Promise<NOAASpaceWeatherData> {
+  return getOrCompute(
+    CacheKeys.NOAA_KINDEX,
+    fetchKIndexFromAPI,
+    CacheTTL.NOAA_DATA
+  );
+}
+
+/**
+ * Direct API fetch (used by caching layer)
+ */
+async function fetchKIndexFromAPI(): Promise<NOAASpaceWeatherData> {
   try {
     // NOAA SWPC JSON API endpoint for K-Index data
     const response = await fetch(
