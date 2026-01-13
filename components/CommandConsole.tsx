@@ -3,7 +3,7 @@
 import React from 'react';
 import { TacticalDeck } from './TacticalDeck';
 import { MarketSensor } from './MarketSensor';
-import { useSystemState, useFamilyMembers, SystemStateProvider } from '@/context/SystemState';
+import { useSystemState, useFamilyMembers } from '@/context/SystemState';
 import { calculateFamilyEntropy, type SystemEntropyReport } from '@/lib/EntanglementLogic';
 import { Activity, Users, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
 
@@ -235,7 +235,7 @@ function CommandConsoleInner({ kIndex, yearElement, monthElement }: CommandConso
   );
 }
 
-// Main export with Provider wrapper
+// Main export - expects to be used within a SystemStateProvider
 export interface CommandConsoleProps {
   kIndex: number;
   yearElement?: WuXingElement;
@@ -244,17 +244,16 @@ export interface CommandConsoleProps {
 
 export function CommandConsole({
   kIndex,
-  yearElement = 'Fire', // 2026 is Fire year
+  yearElement = 'Fire',
   monthElement,
 }: CommandConsoleProps) {
+  // Use inner component directly - assumes SystemStateProvider exists in parent
   return (
-    <SystemStateProvider>
-      <CommandConsoleInner
-        kIndex={kIndex}
-        yearElement={yearElement}
-        monthElement={monthElement}
-      />
-    </SystemStateProvider>
+    <CommandConsoleInner
+      kIndex={kIndex}
+      yearElement={yearElement}
+      monthElement={monthElement}
+    />
   );
 }
 
