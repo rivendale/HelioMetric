@@ -1,4 +1,3 @@
-import React from 'react';
 import { useSystemState, useFamilyMembers } from '@/context/SystemState';
 import { calculateFamilyEntropy, type SystemEntropyReport } from '@/lib/EntanglementLogic';
 import { Activity, Users, AlertTriangle, CheckCircle, Zap } from 'lucide-react';
@@ -131,7 +130,7 @@ function FamilyNodesPanel() {
   );
 }
 
-export function CommandConsole({ kIndex, yearElement = 'Fire' }: CommandConsoleProps) {
+export function CommandConsole(_props: CommandConsoleProps) {
   const { state } = useSystemState();
   const entropyReport = calculateFamilyEntropy(state.nodes);
 
