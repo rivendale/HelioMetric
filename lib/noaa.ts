@@ -26,6 +26,7 @@ export interface NOAASpaceWeatherData {
   averageKp: number;
   maxKp: number;
   status: 'quiet' | 'unsettled' | 'storm';
+  isSimulated?: boolean; // True when NOAA API is unavailable and mock data is used
 }
 
 /**
@@ -154,6 +155,7 @@ function getMockKIndexData(): NOAASpaceWeatherData {
     averageKp: Math.round(avgKp * 100) / 100,
     maxKp,
     status: getStormStatus(latest.kpIndex),
+    isSimulated: true,
   };
 }
 

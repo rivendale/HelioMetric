@@ -32,6 +32,19 @@ export default async function Home() {
       </header>
 
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Warning banner when using simulated data */}
+        {noaaData.isSimulated && (
+          <div className="bg-amber-950/50 border border-amber-800 rounded-lg p-4 flex items-center gap-3">
+            <div className="text-amber-400 text-xl">⚠</div>
+            <div>
+              <p className="text-amber-400 font-semibold text-sm">NOAA Data Unavailable</p>
+              <p className="text-amber-500/80 text-xs">
+                Live space weather data is currently unavailable. Displaying simulated values for demonstration.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* NOAA K-Index Status Panel (Static Server Data) */}
         <section className="bg-gray-900 border border-gray-800 rounded-lg p-6">
           <h2 className="text-xl font-bold mb-4 text-cyan-400 font-[family-name:var(--font-geist-mono)]">
