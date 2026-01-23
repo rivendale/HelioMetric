@@ -10,7 +10,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "prestart": "[ -d .next ] || yarn build",
     "lint": "next lint"
   },
   "dependencies": {

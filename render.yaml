@@ -4,14 +4,18 @@ services:
     runtime: node
     plan: free
     region: oregon
-    buildCommand: yarn install --frozen-lockfile && yarn build
-    startCommand: yarn start
+    buildCommand: yarn install --frozen-lockfile && NODE_OPTIONS="--max-old-space-size=448" yarn build && cp -r .next/static .next/standalone/.next/
+    startCommand: node .next/standalone/server.js
     healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
       - key: NODE_VERSION
         value: "20"
+      - key: PORT
+        value: "10000"
+      - key: HOSTNAME
+        value: "0.0.0.0"
       - key: GOOGLE_MAPS_API_KEY
         sync: false
       - key: UPSTASH_REDIS_REST_URL
