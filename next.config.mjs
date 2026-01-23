@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Explicitly target Node.js runtime (not Edge)
+  // Production optimizations
+  poweredByHeader: false,
+  reactStrictMode: true,
+
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb',

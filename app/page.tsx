@@ -5,6 +5,10 @@ import {
 } from '@/lib/noaa';
 import { DashboardClient } from '@/components/DashboardClient';
 
+// Force dynamic rendering - real-time NOAA data requires fresh fetches
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * HelioMetric Instrument Panel
  * Server Component - fetches NOAA data and passes to client
