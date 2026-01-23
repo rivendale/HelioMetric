@@ -1,51 +1,24 @@
 services:
-  # FastAPI Backend Service
+  # Combined FastAPI + React Single Service
   - type: web
-    name: heliometric-api
+    name: heliometric
     runtime: python
     plan: free
     region: oregon
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /
+    buildCommand: |
+      cd frontend && yarn install && yarn build && cd .. && pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/
     envVars:
       - key: PORT
         value: "10000"
       - key: PYTHON_VERSION
         value: "3.11.0"
-      - key: FRONTEND_URL
-        sync: false
+      - key: NODE_VERSION
+        value: "20"
       - key: GOOGLE_MAPS_API_KEY
         sync: false
       - key: UPSTASH_REDIS_REST_URL
         sync: false
       - key: UPSTASH_REDIS_REST_TOKEN
-        sync: false
-
-  # React/Vite Static Frontend
-  - type: web
-    name: heliometric
-    runtime: static
-    plan: free
-    region: oregon
-    rootDir: frontend
-    buildCommand: yarn install && yarn build
-    staticPublishPath: dist
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: public, max-age=31536000, immutable
-      - path: /index.html
-        name: Cache-Control
-        value: no-cache
-    routes:
-      - type: rewrite
-        source: /api/*
-        destination: https://heliometric-api.onrender.com/api/*
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: VITE_API_URL
         sync: false
