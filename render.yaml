@@ -2,12 +2,16 @@ services:
   - type: web
     name: heliometric
     runtime: node
-    nodeVersion: "20"
-    buildCommand: yarn install && yarn build
+    plan: free
+    region: oregon
+    buildCommand: yarn install --frozen-lockfile && yarn build
     startCommand: yarn start
+    healthCheckPath: /
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: "20"
       - key: GOOGLE_MAPS_API_KEY
         sync: false
       - key: UPSTASH_REDIS_REST_URL
