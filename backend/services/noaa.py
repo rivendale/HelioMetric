@@ -1,0 +1,176 @@
+"""
+NOAA Space Weather K-Index API Integration
+Fetches real-time geomagnetic activity data with Redis caching
+
+K-Index Scale (0-9):
+0-4: Quiet to unsettled
+5: Minor storm
+6: Moderate storm
+7: Strong storm
+8: Severe storm
+9: Extreme storm
+"""
+
+import math
+import random
+from datetime import datetime
+from typing import List, Literal
+import httpx
+from pydantic import BaseModel
+
+from services.redis_cache import get_or_compute, CacheKeys, CacheTTL
+
+
+class KIndexReading(BaseModel):
+    """Single K-Index reading"""
+    time_tag: str
+    kp_index: float
+    observed_time: datetime
+
+
+class NOAASpaceWeatherData(BaseModel):
+    """Complete NOAA space weather response"""
+    latest: KIndexReading
+    readings: List[KIndexReading]
+    average_kp: float
+    max_kp: float
+    status: Literal["quiet", "unsettled", "storm"]
+    is_simulated: bool = False
+
+
+def get_storm_status(kp: float) -> Literal["quiet", "unsettled", "storm"]:
+    """Determine storm status from K-Index value"""
+    if kp >= 5:
+        return "storm"
+    if kp >= 4:
+        return "unsettled"
+    return "quiet"
+
+
+def get_kindex_description(kp: float) -> str:
+    """Get human-readable K-Index description"""
+    if kp >= 9:
+        return "Extreme Geomagnetic Storm (G5)"
+    if kp >= 8:
+        return "Severe Geomagnetic Storm (G4)"
+    if kp >= 7:
+        return "Strong Geomagnetic Storm (G3)"
+    if kp >= 6:
+        return "Moderate Geomagnetic Storm (G2)"
+    if kp >= 5:
+        return "Minor Geomagnetic Storm (G1)"
+    if kp >= 4:
+        return "Unsettled Conditions"
+    return "Quiet Conditions"
+
+
+def get_kindex_color(kp: float) -> str:
+    """Get color code for K-Index visualization"""
+    if kp >= 8:
+        return "#dc2626"  # red-600
+    if kp >= 7:
+        return "#ea580c"  # orange-600
+    if kp >= 6:
+        return "#f59e0b"  # amber-500
+    if kp >= 5:
+        return "#eab308"  # yellow-500
+    if kp >= 4:
+        return "#84cc16"  # lime-500
+    return "#10b981"  # emerald-500
+
+
+def get_mock_kindex_data() -> dict:
+    """Generate mock data for development and error fallback"""
+    now = datetime.utcnow()
+    mock_readings = []
+
+    for i in range(24):
+        time_offset_ms = (23 - i) * 15 * 60 * 1000
+        timestamp = datetime.fromtimestamp(now.timestamp() - time_offset_ms / 1000)
+
+        # Simulate varying K-Index with some randomness
+        base_kp = 3 + math.sin(i / 4) * 2
+        kp_index = max(0, min(9, base_kp + (random.random() - 0.5)))
+
+        mock_readings.append({
+            "time_tag": timestamp.isoformat(),
+            "kp_index": round(kp_index, 1),
+            "observed_time": timestamp.isoformat()
+        })
+
+    latest = mock_readings[-1]
+    avg_kp = sum(r["kp_index"] for r in mock_readings) / len(mock_readings)
+    max_kp = max(r["kp_index"] for r in mock_readings)
+
+    return {
+        "latest": latest,
+        "readings": mock_readings,
+        "average_kp": round(avg_kp, 2),
+        "max_kp": max_kp,
+        "status": get_storm_status(latest["kp_index"]),
+        "is_simulated": True
+    }
+
+
+async def fetch_kindex_from_api() -> dict:
+    """Direct API fetch from NOAA"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
+                headers={"Accept": "application/json"},
+                timeout=10.0
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        if not isinstance(data, list):
+            raise ValueError("Invalid response format from NOAA API")
+
+        # Skip header row and parse readings
+        readings = []
+        for row in data[1:]:
+            if len(row) >= 2 and row[1] is not None:
+                try:
+                    kp_value = float(row[1])
+                    observed_time = datetime.fromisoformat(row[0].replace("Z", "+00:00").replace(" ", "T"))
+                    readings.append({
+                        "time_tag": row[0],
+                        "kp_index": kp_value,
+                        "observed_time": observed_time.isoformat()
+                    })
+                except (ValueError, IndexError):
+                    continue
+
+        if not readings:
+            raise ValueError("No valid K-Index readings available from NOAA")
+
+        # Sort by time descending
+        readings.sort(key=lambda x: x["observed_time"], reverse=True)
+
+        latest = readings[0]
+        valid_kp_values = [r["kp_index"] for r in readings if not math.isnan(r["kp_index"])]
+        average_kp = sum(valid_kp_values) / len(valid_kp_values)
+        max_kp = max(valid_kp_values)
+
+        return {
+            "latest": latest,
+            "readings": readings[:24],  # Last 24 readings
+            "average_kp": round(average_kp, 2),
+            "max_kp": max_kp,
+            "status": get_storm_status(latest["kp_index"]),
+            "is_simulated": False
+        }
+
+    except Exception as e:
+        print(f"Error fetching K-Index from NOAA: {e}")
+        return get_mock_kindex_data()
+
+
+async def fetch_kindex() -> dict:
+    """Fetch K-Index with Redis caching"""
+    return await get_or_compute(
+        CacheKeys.NOAA_KINDEX,
+        fetch_kindex_from_api,
+        CacheTTL.NOAA_DATA
+    )

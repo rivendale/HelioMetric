@@ -1,24 +1,51 @@
 services:
+  # FastAPI Backend Service
   - type: web
-    name: heliometric
-    runtime: node
+    name: heliometric-api
+    runtime: python
     plan: free
     region: oregon
-    buildCommand: yarn install --frozen-lockfile && NODE_OPTIONS="--max-old-space-size=448" yarn build && cp -r .next/static .next/standalone/.next/
-    startCommand: node .next/standalone/server.js
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NODE_VERSION
-        value: "20"
       - key: PORT
         value: "10000"
-      - key: HOSTNAME
-        value: "0.0.0.0"
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: FRONTEND_URL
+        sync: false
       - key: GOOGLE_MAPS_API_KEY
         sync: false
       - key: UPSTASH_REDIS_REST_URL
         sync: false
       - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+
+  # React/Vite Static Frontend
+  - type: web
+    name: heliometric
+    runtime: static
+    plan: free
+    region: oregon
+    rootDir: frontend
+    buildCommand: yarn install && yarn build
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://heliometric-api.onrender.com/api/*
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
         sync: false
