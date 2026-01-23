@@ -1,21 +1,21 @@
 services:
+  # Combined FastAPI + React Single Service
   - type: web
     name: heliometric
-    runtime: node
+    runtime: python
     plan: free
     region: oregon
-    buildCommand: yarn install --frozen-lockfile && NODE_OPTIONS="--max-old-space-size=448" yarn build && cp -r .next/static .next/standalone/.next/
-    startCommand: node .next/standalone/server.js
-    healthCheckPath: /
+    buildCommand: |
+      cd frontend && yarn install && yarn build && cd .. && pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NODE_VERSION
-        value: "20"
       - key: PORT
         value: "10000"
-      - key: HOSTNAME
-        value: "0.0.0.0"
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: NODE_VERSION
+        value: "20"
       - key: GOOGLE_MAPS_API_KEY
         sync: false
       - key: UPSTASH_REDIS_REST_URL
