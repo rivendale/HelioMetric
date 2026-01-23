@@ -53,6 +53,16 @@ app.include_router(location.router, prefix="/api", tags=["Location"])
 app.include_router(geocode.router, prefix="/api", tags=["Geocode"])
 
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Render and monitoring"""
+    return {
+        "status": "healthy",
+        "service": "HelioMetric",
+        "version": "0.3.0"
+    }
+
+
 @app.get("/api")
 async def api_info():
     """API information endpoint"""
@@ -61,6 +71,7 @@ async def api_info():
             {"path": "/api/noaa", "method": "GET", "description": "Get NOAA K-Index data"},
             {"path": "/api/location", "method": "POST", "description": "Analyze geomagnetic impact for coordinates"},
             {"path": "/api/geocode", "method": "POST", "description": "Convert address to coordinates"},
+            {"path": "/health", "method": "GET", "description": "Health check endpoint"},
         ],
         "docs": "/api/docs"
     }

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { MapPin, Compass, Globe, Zap, Search, Loader2, AlertTriangle } from 'lucide-react';
 import { analyzeLocation, geocodeAddress, type LocationAnalysis } from '@/api/client';
 

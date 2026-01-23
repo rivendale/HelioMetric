@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useSystemState, useTemporalState } from '@/context/SystemState';
 import { TimeControl } from './TimeControl';
 import { CommandConsole } from './CommandConsole';

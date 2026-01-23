@@ -1,4 +1,3 @@
-import React from 'react';
 import { Shield, Zap, Anchor, Flame, Droplets, TreePine, Mountain, Gem } from 'lucide-react';
 
 type CardElement = 'Wood' | 'Fire' | 'Earth' | 'Metal' | 'Water';
@@ -67,7 +66,7 @@ function selectProtocolCards(kIndex: number): ProtocolCard[] {
   }
 }
 
-function ProtocolCardComponent({ card, index }: { card: ProtocolCard; index: number }) {
+function ProtocolCardComponent({ card }: { card: ProtocolCard }) {
   const elementStyle = ELEMENT_COLORS[card.element];
   const rarityStyle = RARITY_STYLES[card.rarity];
 
@@ -117,8 +116,8 @@ export function TacticalDeck({ kIndex }: TacticalDeckProps) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {cards.map((card, index) => (
-          <ProtocolCardComponent key={card.id} card={card} index={index} />
+        {cards.map((card) => (
+          <ProtocolCardComponent key={card.id} card={card} />
         ))}
       </div>
 
