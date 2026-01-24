@@ -71,23 +71,28 @@ export function PersonalInsights({ kIndex, yearElement }: PersonalInsightsProps)
   const { state } = useUIMode();
   const { astrologyProfile } = state;
 
-  if (!astrologyProfile.dateOfBirth) {
+  // Check if user has any zodiac info (either from date or direct selection)
+  const hasWesternSign = !!astrologyProfile.westernZodiac;
+  const hasChineseSign = !!astrologyProfile.chineseZodiac && !!astrologyProfile.chineseElement;
+  const hasAnyZodiacInfo = hasWesternSign || hasChineseSign;
+
+  if (!hasAnyZodiacInfo) {
     return (
       <section className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
         <h2 className="text-lg font-semibold text-slate-800 mb-4">
           Personal Insights
         </h2>
         <p className="text-slate-500 text-sm">
-          Add your birth date in settings to see personalized astrology insights.
+          Add your birth date or select your zodiac signs in settings to see personalized insights.
         </p>
       </section>
     );
   }
 
-  const birthDate = new Date(astrologyProfile.dateOfBirth);
-  const westernSign = astrologyProfile.westernZodiac || 'Unknown';
-  const chineseSign = astrologyProfile.chineseZodiac || 'Unknown';
-  const chineseElement = astrologyProfile.chineseElement || 'Unknown';
+  const birthDate = astrologyProfile.dateOfBirth ? new Date(astrologyProfile.dateOfBirth) : null;
+  const westernSign = astrologyProfile.westernZodiac || null;
+  const chineseSign = astrologyProfile.chineseZodiac || null;
+  const chineseElement = astrologyProfile.chineseElement || null;
 
   // Get compatibility with current year element
   const compatibility = chineseElement && yearElement
@@ -132,47 +137,53 @@ export function PersonalInsights({ kIndex, yearElement }: PersonalInsightsProps)
         <h2 className="text-lg font-semibold text-slate-800">
           Your Personal Insights
         </h2>
-        <span className="text-xs text-slate-400">
-          Born {birthDate.toLocaleDateString()}
-        </span>
+        {birthDate && (
+          <span className="text-xs text-slate-400">
+            Born {birthDate.toLocaleDateString()}
+          </span>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className={`grid grid-cols-1 ${hasWesternSign && hasChineseSign ? 'md:grid-cols-2' : ''} gap-6`}>
         {/* Western Zodiac */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">
-              {getWesternZodiacEmoji(westernSign)}
-            </span>
-            <div>
-              <h3 className="font-medium text-slate-800">Western Zodiac</h3>
-              <p className="text-sm text-slate-500">{westernSign}</p>
+        {westernSign && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">
+                {getWesternZodiacEmoji(westernSign)}
+              </span>
+              <div>
+                <h3 className="font-medium text-slate-800">Western Zodiac</h3>
+                <p className="text-sm text-slate-500">{westernSign}</p>
+              </div>
             </div>
+            <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">
+              {getWesternZodiacInsight(westernSign, kIndex)}
+            </p>
           </div>
-          <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg">
-            {getWesternZodiacInsight(westernSign, kIndex)}
-          </p>
-        </div>
+        )}
 
         {/* Chinese Zodiac */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">
-              {getChineseZodiacEmoji(chineseSign)}
-            </span>
-            <div>
-              <h3 className="font-medium text-slate-800">Chinese Zodiac</h3>
-              <p className="text-sm text-slate-500">
-                <span className={getElementColor(chineseElement)}>{chineseElement}</span> {chineseSign}
+        {chineseSign && chineseElement && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">
+                {getChineseZodiacEmoji(chineseSign)}
+              </span>
+              <div>
+                <h3 className="font-medium text-slate-800">Chinese Zodiac</h3>
+                <p className="text-sm text-slate-500">
+                  <span className={getElementColor(chineseElement)}>{chineseElement}</span> {chineseSign}
+                </p>
+              </div>
+            </div>
+            <div className={`p-3 rounded-lg ${getElementBg(chineseElement)}`}>
+              <p className="text-sm text-slate-600">
+                Your {chineseElement} {chineseSign} nature brings unique strengths to navigate current cosmic conditions.
               </p>
             </div>
           </div>
-          <div className={`p-3 rounded-lg ${getElementBg(chineseElement)}`}>
-            <p className="text-sm text-slate-600">
-              Your {chineseElement} {chineseSign} nature brings unique strengths to navigate current cosmic conditions.
-            </p>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Element Compatibility */}
@@ -198,25 +209,31 @@ export function PersonalInsights({ kIndex, yearElement }: PersonalInsightsProps)
       )}
 
       {/* Solar Activity Impact */}
-      <div className="mt-6 pt-6 border-t border-slate-200">
-        <h3 className="text-sm font-medium text-slate-600 mb-3">
-          Solar Activity Impact
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <div className="text-xs text-slate-500 mb-1">Sensitivity Level</div>
-            <div className={`text-lg font-semibold ${getSensitivityColor(westernSign, kIndex)}`}>
-              {getSensitivityLevel(westernSign, kIndex)}
-            </div>
-          </div>
-          <div className="bg-slate-50 p-4 rounded-lg">
-            <div className="text-xs text-slate-500 mb-1">Energy Forecast</div>
-            <div className="text-lg font-semibold text-slate-700">
-              {getEnergyForecast(chineseElement, yearElement, kIndex)}
-            </div>
+      {(westernSign || chineseElement) && (
+        <div className="mt-6 pt-6 border-t border-slate-200">
+          <h3 className="text-sm font-medium text-slate-600 mb-3">
+            Solar Activity Impact
+          </h3>
+          <div className={`grid ${westernSign && chineseElement ? 'grid-cols-2' : 'grid-cols-1'} gap-4`}>
+            {westernSign && (
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <div className="text-xs text-slate-500 mb-1">Sensitivity Level</div>
+                <div className={`text-lg font-semibold ${getSensitivityColor(westernSign, kIndex)}`}>
+                  {getSensitivityLevel(westernSign, kIndex)}
+                </div>
+              </div>
+            )}
+            {chineseElement && (
+              <div className="bg-slate-50 p-4 rounded-lg">
+                <div className="text-xs text-slate-500 mb-1">Energy Forecast</div>
+                <div className="text-lg font-semibold text-slate-700">
+                  {getEnergyForecast(chineseElement, yearElement, kIndex)}
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
