@@ -21,18 +21,18 @@ function getKIndexSeverity(kIndex: number): KIndexSeverity {
   return 'Severe';
 }
 
-const ELEMENT_COLORS: Record<CardElement, { border: string; bg: string; text: string; glow: string }> = {
-  Wood: { border: 'border-green-500', bg: 'bg-green-950/50', text: 'text-green-400', glow: 'shadow-green-500/20' },
-  Fire: { border: 'border-orange-500', bg: 'bg-orange-950/50', text: 'text-orange-400', glow: 'shadow-orange-500/20' },
-  Earth: { border: 'border-amber-500', bg: 'bg-amber-950/50', text: 'text-amber-400', glow: 'shadow-amber-500/20' },
-  Metal: { border: 'border-slate-400', bg: 'bg-slate-950/50', text: 'text-slate-300', glow: 'shadow-slate-400/20' },
-  Water: { border: 'border-blue-500', bg: 'bg-blue-950/50', text: 'text-blue-400', glow: 'shadow-blue-500/20' },
+const ELEMENT_COLORS: Record<CardElement, { border: string; bg: string; text: string }> = {
+  Wood: { border: 'border-green-300', bg: 'bg-green-50', text: 'text-green-600' },
+  Fire: { border: 'border-red-300', bg: 'bg-red-50', text: 'text-red-500' },
+  Earth: { border: 'border-amber-300', bg: 'bg-amber-50', text: 'text-amber-600' },
+  Metal: { border: 'border-slate-300', bg: 'bg-slate-50', text: 'text-slate-600' },
+  Water: { border: 'border-blue-300', bg: 'bg-blue-50', text: 'text-blue-600' },
 };
 
 const RARITY_STYLES: Record<CardRarity, { border: string; badge: string }> = {
-  Common: { border: 'border-2', badge: 'bg-gray-700 text-gray-300' },
-  Rare: { border: 'border-2 border-opacity-100', badge: 'bg-blue-900 text-blue-300' },
-  Legendary: { border: 'border-2 border-opacity-100 ring-2 ring-yellow-500/30', badge: 'bg-gradient-to-r from-yellow-900 to-amber-800 text-yellow-300' },
+  Common: { border: 'border', badge: 'bg-slate-100 text-slate-600' },
+  Rare: { border: 'border-2', badge: 'bg-blue-100 text-blue-700' },
+  Legendary: { border: 'border-2 ring-2 ring-amber-200', badge: 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700' },
 };
 
 const ELEMENT_ICONS: Record<CardElement, React.ReactNode> = {
@@ -71,17 +71,17 @@ function ProtocolCardComponent({ card }: { card: ProtocolCard }) {
   const rarityStyle = RARITY_STYLES[card.rarity];
 
   return (
-    <div className={`relative overflow-hidden rounded-lg p-4 ${elementStyle.bg} ${elementStyle.border} ${rarityStyle.border} shadow-lg ${elementStyle.glow} transition-all duration-300 hover:scale-105 cursor-pointer`}>
-      <div className={`absolute top-2 right-2 px-2 py-0.5 rounded text-xs font-semibold ${rarityStyle.badge}`}>{card.rarity}</div>
+    <div className={`relative overflow-hidden rounded-xl p-4 ${elementStyle.bg} ${elementStyle.border} ${rarityStyle.border} shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5`}>
+      <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-medium ${rarityStyle.badge}`}>{card.rarity}</div>
       <div className={`mb-3 ${elementStyle.text}`}>{card.icon}</div>
-      <h4 className={`font-bold text-sm mb-1 ${elementStyle.text}`}>{card.name}</h4>
+      <h4 className={`font-semibold text-sm mb-1 ${elementStyle.text}`}>{card.name}</h4>
       <div className="flex items-center gap-1 mb-2">
         <span className={elementStyle.text}>{ELEMENT_ICONS[card.element]}</span>
-        <span className="text-xs text-gray-400">{card.element}</span>
+        <span className="text-xs text-slate-500">{card.element}</span>
       </div>
-      <p className="text-xs text-gray-400 mb-2 line-clamp-2">{card.description}</p>
-      <div className="mt-auto pt-2 border-t border-gray-700/50">
-        <p className="text-xs font-mono text-cyan-400">{card.effect}</p>
+      <p className="text-xs text-slate-600 mb-2 line-clamp-2">{card.description}</p>
+      <div className="mt-auto pt-2 border-t border-slate-200/50">
+        <p className="text-xs font-medium text-blue-600">{card.effect}</p>
       </div>
     </div>
   );
@@ -96,22 +96,29 @@ export function TacticalDeck({ kIndex }: TacticalDeckProps) {
   const severity = getKIndexSeverity(kIndex);
 
   const severityColors: Record<KIndexSeverity, string> = {
-    Quiet: 'text-emerald-400',
-    Unsettled: 'text-yellow-400',
-    Storm: 'text-orange-400',
-    Severe: 'text-red-400',
+    Quiet: 'text-green-600',
+    Unsettled: 'text-amber-600',
+    Storm: 'text-orange-500',
+    Severe: 'text-red-600',
+  };
+
+  const severityBg: Record<KIndexSeverity, string> = {
+    Quiet: 'bg-green-50',
+    Unsettled: 'bg-amber-50',
+    Storm: 'bg-orange-50',
+    Severe: 'bg-red-50',
   };
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-bold text-cyan-400 font-mono uppercase tracking-wide">Tactical Protocol Deck</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Today's recommended interventions</p>
+          <h3 className="text-sm font-semibold text-slate-800">Recommended Actions</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Based on current conditions</p>
         </div>
-        <div className="text-right">
-          <div className={`text-xs font-semibold ${severityColors[severity]}`}>{severity.toUpperCase()} CONDITIONS</div>
-          <div className="text-xs text-gray-500">Kp {kIndex.toFixed(1)}</div>
+        <div className={`text-right px-3 py-1 rounded-lg ${severityBg[severity]}`}>
+          <div className={`text-xs font-semibold ${severityColors[severity]}`}>{severity.toUpperCase()}</div>
+          <div className="text-xs text-slate-500">Kp {kIndex.toFixed(1)}</div>
         </div>
       </div>
 
@@ -121,8 +128,8 @@ export function TacticalDeck({ kIndex }: TacticalDeckProps) {
         ))}
       </div>
 
-      <div className="mt-3 text-center">
-        <p className="text-xs text-gray-600">Cards selected based on current space weather and system dynamics</p>
+      <div className="mt-4 pt-3 border-t border-slate-100">
+        <p className="text-xs text-slate-400 text-center">Suggestions based on space weather and elemental theory</p>
       </div>
     </div>
   );
