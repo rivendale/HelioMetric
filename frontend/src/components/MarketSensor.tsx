@@ -56,11 +56,11 @@ const OPPOSING_ELEMENTS: Record<WuXingElement, WuXingElement> = {
 };
 
 const SIGNAL_STYLES: Record<AssetSignal, { color: string; bg: string; icon: React.ReactNode }> = {
-  Momentum: { color: 'text-green-400', bg: 'bg-green-950/50', icon: <TrendingUp className="w-3 h-3" /> },
-  Accumulate: { color: 'text-blue-400', bg: 'bg-blue-950/50', icon: <TrendingUp className="w-3 h-3" /> },
-  Hold: { color: 'text-yellow-400', bg: 'bg-yellow-950/50', icon: <Minus className="w-3 h-3" /> },
-  Distribute: { color: 'text-orange-400', bg: 'bg-orange-950/50', icon: <TrendingDown className="w-3 h-3" /> },
-  Avoid: { color: 'text-red-400', bg: 'bg-red-950/50', icon: <TrendingDown className="w-3 h-3" /> },
+  Momentum: { color: 'text-green-600', bg: 'bg-green-50', icon: <TrendingUp className="w-3 h-3" /> },
+  Accumulate: { color: 'text-blue-600', bg: 'bg-blue-50', icon: <TrendingUp className="w-3 h-3" /> },
+  Hold: { color: 'text-amber-600', bg: 'bg-amber-50', icon: <Minus className="w-3 h-3" /> },
+  Distribute: { color: 'text-orange-500', bg: 'bg-orange-50', icon: <TrendingDown className="w-3 h-3" /> },
+  Avoid: { color: 'text-red-500', bg: 'bg-red-50', icon: <TrendingDown className="w-3 h-3" /> },
 };
 
 const ELEMENT_ICONS: Record<WuXingElement, React.ReactNode> = {
@@ -72,11 +72,11 @@ const ELEMENT_ICONS: Record<WuXingElement, React.ReactNode> = {
 };
 
 const ELEMENT_COLORS: Record<WuXingElement, string> = {
-  Wood: 'text-green-400',
-  Fire: 'text-orange-400',
-  Earth: 'text-amber-400',
-  Metal: 'text-slate-300',
-  Water: 'text-blue-400',
+  Wood: 'text-green-500',
+  Fire: 'text-red-500',
+  Earth: 'text-amber-600',
+  Metal: 'text-slate-500',
+  Water: 'text-blue-500',
 };
 
 function calculateResonantAssets(yearElement: WuXingElement, kIndex: number): AssetCorrelation[] {
@@ -104,25 +104,25 @@ function AssetRow({ asset }: { asset: AssetCorrelation }) {
   const elementColor = ELEMENT_COLORS[asset.element];
 
   return (
-    <div className={`flex items-center justify-between py-2 px-3 rounded ${signalStyle.bg} border border-gray-800/50 hover:border-gray-700 transition-colors`}>
+    <div className={`flex items-center justify-between py-2 px-3 rounded-lg ${signalStyle.bg} border border-slate-100 hover:shadow-sm transition-shadow`}>
       <div className="flex items-center gap-3">
         <div className="w-12">
-          <span className="font-mono text-sm font-bold text-gray-100">{asset.ticker}</span>
+          <span className="font-mono text-sm font-bold text-slate-800">{asset.ticker}</span>
         </div>
         <div className={elementColor}>{ELEMENT_ICONS[asset.element]}</div>
         <div className="hidden sm:block">
-          <span className="text-xs text-gray-400">{asset.name}</span>
+          <span className="text-xs text-slate-600">{asset.name}</span>
         </div>
       </div>
       <div className="flex items-center gap-3">
         <div className="w-12 text-right">
-          <span className={`text-xs font-mono ${asset.resonanceScore > 70 ? 'text-green-400' : asset.resonanceScore > 40 ? 'text-yellow-400' : 'text-red-400'}`}>
+          <span className={`text-xs font-mono ${asset.resonanceScore > 70 ? 'text-green-600' : asset.resonanceScore > 40 ? 'text-amber-600' : 'text-red-500'}`}>
             {asset.resonanceScore}%
           </span>
         </div>
-        <div className={`flex items-center gap-1 px-2 py-0.5 rounded ${signalStyle.color} bg-gray-900/50`}>
+        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${signalStyle.color} ${signalStyle.bg}`}>
           {signalStyle.icon}
-          <span className="text-xs font-semibold">{asset.signal}</span>
+          <span className="text-xs font-medium">{asset.signal}</span>
         </div>
       </div>
     </div>
@@ -131,15 +131,15 @@ function AssetRow({ asset }: { asset: AssetCorrelation }) {
 
 function VolatilityIndicator({ kIndex }: { kIndex: number }) {
   const level = kIndex < 3 ? 'Low' : kIndex < 5 ? 'Moderate' : kIndex < 7 ? 'High' : 'Extreme';
-  const color = kIndex < 3 ? 'text-green-400' : kIndex < 5 ? 'text-yellow-400' : kIndex < 7 ? 'text-orange-400' : 'text-red-400';
-  const bgColor = kIndex < 3 ? 'bg-green-950/30' : kIndex < 5 ? 'bg-yellow-950/30' : kIndex < 7 ? 'bg-orange-950/30' : 'bg-red-950/30';
+  const color = kIndex < 3 ? 'text-green-600' : kIndex < 5 ? 'text-amber-600' : kIndex < 7 ? 'text-orange-500' : 'text-red-600';
+  const bgColor = kIndex < 3 ? 'bg-green-50' : kIndex < 5 ? 'bg-amber-50' : kIndex < 7 ? 'bg-orange-50' : 'bg-red-50';
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded ${bgColor}`}>
+    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${bgColor}`}>
       <Zap className={`w-4 h-4 ${color}`} />
       <div>
-        <div className={`text-xs font-semibold ${color}`}>{level} Volatility</div>
-        <div className="text-xs text-gray-500">Kp {kIndex.toFixed(1)} influence</div>
+        <div className={`text-xs font-medium ${color}`}>{level} Volatility</div>
+        <div className="text-xs text-slate-500">Kp {kIndex.toFixed(1)} influence</div>
       </div>
     </div>
   );
@@ -151,16 +151,16 @@ export function MarketSensor({ yearElement, kIndex }: MarketSensorProps) {
   const avoidList = resonantAssets.filter((a) => a.signal === 'Avoid');
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
+    <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-sm font-bold text-cyan-400 font-mono uppercase tracking-wide">Market Resonance Sensor</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Element-correlated asset signals</p>
+          <h3 className="text-sm font-semibold text-slate-800">Market Correlations</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Element-based asset signals</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className={`flex items-center gap-1 px-2 py-1 rounded bg-gray-800 ${ELEMENT_COLORS[yearElement]}`}>
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 border border-slate-200 ${ELEMENT_COLORS[yearElement]}`}>
             {ELEMENT_ICONS[yearElement]}
-            <span className="text-xs font-semibold">{yearElement} Year</span>
+            <span className="text-xs font-medium">{yearElement} Year</span>
           </div>
         </div>
       </div>
@@ -171,8 +171,8 @@ export function MarketSensor({ yearElement, kIndex }: MarketSensorProps) {
 
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-2">
-          <TrendingUp className="w-4 h-4 text-green-400" />
-          <span className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Resonant Assets</span>
+          <TrendingUp className="w-4 h-4 text-green-500" />
+          <span className="text-xs font-medium text-slate-600 uppercase tracking-wide">Favorable Assets</span>
         </div>
         <div className="space-y-1.5">
           {topPicks.map((asset) => (
@@ -184,8 +184,8 @@ export function MarketSensor({ yearElement, kIndex }: MarketSensorProps) {
       {avoidList.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Shield className="w-4 h-4 text-red-400" />
-            <span className="text-xs font-semibold text-gray-300 uppercase tracking-wide">Counter-Resonant</span>
+            <Shield className="w-4 h-4 text-red-500" />
+            <span className="text-xs font-medium text-slate-600 uppercase tracking-wide">Unfavorable</span>
           </div>
           <div className="space-y-1.5">
             {avoidList.map((asset) => (
@@ -195,8 +195,8 @@ export function MarketSensor({ yearElement, kIndex }: MarketSensorProps) {
         </div>
       )}
 
-      <div className="mt-4 pt-3 border-t border-gray-800">
-        <p className="text-xs text-gray-600 text-center">Correlations based on Wu Xing elemental theory - Not financial advice</p>
+      <div className="mt-4 pt-3 border-t border-slate-100">
+        <p className="text-xs text-slate-400 text-center">Based on Wu Xing elemental theory - Not financial advice</p>
       </div>
     </div>
   );

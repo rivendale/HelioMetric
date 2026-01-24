@@ -52,24 +52,24 @@ export function TimeControl() {
 
   const getElementColor = (element: string): string => {
     const colors: Record<string, string> = {
-      Fire: 'text-red-400',
-      Earth: 'text-amber-400',
-      Metal: 'text-gray-300',
-      Water: 'text-blue-400',
-      Wood: 'text-green-400',
+      Fire: 'text-red-500',
+      Earth: 'text-amber-600',
+      Metal: 'text-slate-500',
+      Water: 'text-blue-500',
+      Wood: 'text-green-500',
     };
-    return colors[element] || 'text-gray-400';
+    return colors[element] || 'text-slate-500';
   };
 
   const getElementBg = (element: string): string => {
     const colors: Record<string, string> = {
-      Fire: 'bg-red-950/50 border-red-800/50',
-      Earth: 'bg-amber-950/50 border-amber-800/50',
-      Metal: 'bg-gray-800/50 border-gray-600/50',
-      Water: 'bg-blue-950/50 border-blue-800/50',
-      Wood: 'bg-green-950/50 border-green-800/50',
+      Fire: 'bg-red-50 border-red-200',
+      Earth: 'bg-amber-50 border-amber-200',
+      Metal: 'bg-slate-100 border-slate-300',
+      Water: 'bg-blue-50 border-blue-200',
+      Wood: 'bg-green-50 border-green-200',
     };
-    return colors[element] || 'bg-gray-900/50 border-gray-700/50';
+    return colors[element] || 'bg-slate-50 border-slate-200';
   };
 
   const yearProgress = useMemo(() => {
@@ -81,115 +81,115 @@ export function TimeControl() {
   }, [temporalState.progressInTerm]);
 
   return (
-    <section className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+    <section className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
       <div
         className={`p-4 cursor-pointer transition-colors ${
-          isExpanded ? 'bg-gray-850' : 'hover:bg-gray-850'
+          isExpanded ? 'bg-slate-50' : 'hover:bg-slate-50'
         }`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
               {isRealTimeMode ? (
-                <div className="flex items-center gap-1.5 text-green-400">
-                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-xs font-medium uppercase tracking-wider">LIVE</span>
+                <div className="flex items-center gap-1.5 text-green-600">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-xs font-medium uppercase tracking-wider">Live</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 text-amber-400">
+                <div className="flex items-center gap-1.5 text-amber-600">
                   <Clock className="w-3.5 h-3.5" />
-                  <span className="text-xs font-medium uppercase tracking-wider">SHIFTED</span>
+                  <span className="text-xs font-medium uppercase tracking-wider">Custom Date</span>
                 </div>
               )}
             </div>
 
-            <div className="h-4 w-px bg-gray-700" />
+            <div className="h-4 w-px bg-slate-200" />
 
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-cyan-400" />
-              <span className="font-mono text-gray-100">{formattedDate}</span>
-              <span className="text-gray-500 text-sm">{formattedTime}</span>
+              <Calendar className="w-4 h-4 text-blue-500" />
+              <span className="font-medium text-slate-800">{formattedDate}</span>
+              <span className="text-slate-500 text-sm">{formattedTime}</span>
             </div>
           </div>
 
-          <div className={`px-3 py-1 rounded border ${getElementBg(temporalState.yearElement)}`}>
-            <span className={`font-semibold font-mono ${getElementColor(temporalState.yearElement)}`}>
+          <div className={`px-3 py-1 rounded-lg border ${getElementBg(temporalState.yearElement)}`}>
+            <span className={`font-semibold ${getElementColor(temporalState.yearElement)}`}>
               {temporalState.yearElement} {temporalState.yearArchetype}
             </span>
-            <span className="text-gray-500 text-sm ml-2">({temporalState.energeticYear})</span>
+            <span className="text-slate-500 text-sm ml-2">({temporalState.energeticYear})</span>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-gray-400">
-              <Sun className="w-4 h-4 text-yellow-400" />
-              <span className="font-mono text-sm">{temporalState.solarLongitudeFormatted}</span>
+            <div className="flex items-center gap-2 text-slate-600">
+              <Sun className="w-4 h-4 text-amber-500" />
+              <span className="text-sm">{temporalState.solarLongitudeFormatted}</span>
             </div>
-            <div className="text-gray-500 text-sm">{temporalState.currentSolarTerm.name}</div>
-            <ChevronRight className={`w-5 h-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+            <div className="text-slate-500 text-sm hidden sm:block">{temporalState.currentSolarTerm.name}</div>
+            <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
           </div>
         </div>
       </div>
 
       {isExpanded && (
-        <div className="border-t border-gray-800 p-4 space-y-4">
-          <div className="flex items-center justify-between gap-4">
+        <div className="border-t border-slate-200 p-4 space-y-4 bg-slate-50">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-1">
               <button
                 onClick={(e) => { e.stopPropagation(); shiftTimeVector(-365); }}
-                className="p-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors"
+                className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
                 title="Shift -1 Year"
               >
                 <ChevronsLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); shiftTimeVector(-30); }}
-                className="p-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors"
+                className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
                 title="Shift -30 Days"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); shiftTimeVector(-1); }}
-                className="px-3 py-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors text-xs font-medium"
+                className="px-3 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors text-xs font-medium"
               >
                 -1d
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); shiftTimeVector(1); }}
-                className="px-3 py-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors text-xs font-medium"
+                className="px-3 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors text-xs font-medium"
               >
                 +1d
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); shiftTimeVector(30); }}
-                className="p-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors"
+                className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); shiftTimeVector(365); }}
-                className="p-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors"
+                className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
               >
                 <ChevronsRight className="w-4 h-4" />
               </button>
             </div>
 
             <div className="flex-1 max-w-xs">
-              <label className="text-xs text-gray-500 uppercase tracking-wider mb-1 block">Vector Calibration</label>
+              <label className="text-xs text-slate-500 uppercase tracking-wider mb-1 block">Select Date</label>
               <input
                 type="date"
                 value={globalDate.toISOString().split('T')[0]}
                 onChange={handleDateChange}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100 font-mono text-sm focus:outline-none focus:border-cyan-600"
+                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
             <div className="flex items-center gap-3">
               <button
                 onClick={(e) => { e.stopPropagation(); setTimeVector(new Date()); }}
-                className="p-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors"
+                className="p-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors"
                 title="Reset to Now"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -197,46 +197,46 @@ export function TimeControl() {
 
               <button
                 onClick={(e) => { e.stopPropagation(); toggleRealTimeMode(!isRealTimeMode); }}
-                className={`flex items-center gap-2 px-4 py-2 rounded font-medium text-sm transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
                   isRealTimeMode
-                    ? 'bg-green-900/50 text-green-400 border border-green-700 hover:bg-green-900/70'
-                    : 'bg-gray-800 text-gray-400 border border-gray-700 hover:bg-gray-700'
+                    ? 'bg-green-100 text-green-700 border border-green-300 hover:bg-green-200'
+                    : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-100'
                 }`}
               >
                 {isRealTimeMode ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                <span>{isRealTimeMode ? 'Real-Time Active' : 'Enable Real-Time'}</span>
+                <span>{isRealTimeMode ? 'Live Mode On' : 'Enable Live'}</span>
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-950 rounded p-3 border border-gray-800">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-lg p-3 border border-slate-200">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Energetic Year Progress</span>
-                <span className="text-xs font-mono text-gray-400">Day {temporalState.dayOfEnergeticYear}/365</span>
+                <span className="text-xs text-slate-500 uppercase tracking-wider">Year Progress</span>
+                <span className="text-xs text-slate-600">Day {temporalState.dayOfEnergeticYear}/365</span>
               </div>
-              <div className="bg-gray-900 rounded-full h-2 overflow-hidden">
+              <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
                 <div
                   className={`h-full transition-all duration-500 ${
-                    temporalState.yearElement === 'Fire' ? 'bg-gradient-to-r from-red-600 to-orange-500' :
-                    temporalState.yearElement === 'Earth' ? 'bg-gradient-to-r from-amber-600 to-yellow-500' :
-                    temporalState.yearElement === 'Metal' ? 'bg-gradient-to-r from-gray-400 to-slate-300' :
-                    temporalState.yearElement === 'Water' ? 'bg-gradient-to-r from-blue-600 to-cyan-500' :
-                    'bg-gradient-to-r from-green-600 to-emerald-500'
+                    temporalState.yearElement === 'Fire' ? 'bg-gradient-to-r from-red-500 to-orange-400' :
+                    temporalState.yearElement === 'Earth' ? 'bg-gradient-to-r from-amber-500 to-yellow-400' :
+                    temporalState.yearElement === 'Metal' ? 'bg-gradient-to-r from-slate-400 to-slate-300' :
+                    temporalState.yearElement === 'Water' ? 'bg-gradient-to-r from-blue-500 to-cyan-400' :
+                    'bg-gradient-to-r from-green-500 to-emerald-400'
                   }`}
                   style={{ width: `${yearProgress}%` }}
                 />
               </div>
             </div>
 
-            <div className="bg-gray-950 rounded p-3 border border-gray-800">
+            <div className="bg-white rounded-lg p-3 border border-slate-200">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-500 uppercase tracking-wider">Solar Term: {temporalState.currentSolarTerm.name}</span>
-                <span className="text-xs text-gray-400">{temporalState.currentSolarTerm.meaning}</span>
+                <span className="text-xs text-slate-500 uppercase tracking-wider">Solar Term: {temporalState.currentSolarTerm.name}</span>
+                <span className="text-xs text-slate-600">{temporalState.currentSolarTerm.meaning}</span>
               </div>
-              <div className="bg-gray-900 rounded-full h-2 overflow-hidden">
+              <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-yellow-500 to-amber-400 transition-all duration-500"
+                  className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 transition-all duration-500"
                   style={{ width: `${termProgress}%` }}
                 />
               </div>
