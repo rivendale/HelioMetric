@@ -1,11 +1,14 @@
 """
 Location Analysis API Router
 POST /api/location - Get geomagnetic impact analysis for coordinates
+
+Provides geomagnetic latitude, magnetic declination, storm impact analysis,
+and optional timezone information for given coordinates.
 """
 
 from typing import Optional
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from services.maps import (
     calculate_geomagnetic_latitude,
@@ -14,94 +17,181 @@ from services.maps import (
     get_timezone,
     is_google_maps_configured
 )
+from utils.responses import (
+    success_response,
+    error_response,
+    ErrorCodes,
+    CamelCaseModel
+)
 
 router = APIRouter()
 
 
+# ============================================================================
+# Request/Response Models with camelCase aliases
+# ============================================================================
+
 class LocationRequest(BaseModel):
     """Location analysis request body"""
-    lat: float
-    lng: float
+    lat: float = Field(..., ge=-90, le=90, description="Latitude (-90 to 90)")
+    lng: float = Field(..., ge=-180, le=180, description="Longitude (-180 to 180)")
+
+    @field_validator('lat')
+    @classmethod
+    def validate_lat(cls, v: float) -> float:
+        if v < -90 or v > 90:
+            raise ValueError("Latitude must be between -90 and 90")
+        return v
+
+    @field_validator('lng')
+    @classmethod
+    def validate_lng(cls, v: float) -> float:
+        if v < -180 or v > 180:
+            raise ValueError("Longitude must be between -180 and 180")
+        return v
 
 
-class TimezoneInfo(BaseModel):
-    """Timezone information"""
-    id: str
-    name: str
-    utc_offset: int
+class TimezoneInfo(CamelCaseModel):
+    """Timezone information with dual-case field names"""
+    id: str = Field(description="Timezone ID (e.g., 'America/New_York')")
+    name: str = Field(description="Timezone display name")
+    utc_offset: int = Field(description="Total UTC offset in seconds (raw + DST)")
 
 
-class GeomagneticInfo(BaseModel):
-    """Geomagnetic properties"""
-    latitude: float
-    declination: float
+class GeomagneticInfo(CamelCaseModel):
+    """Geomagnetic properties with dual-case field names"""
+    latitude: float = Field(description="Geomagnetic latitude in degrees")
+    declination: float = Field(description="Magnetic declination in degrees")
 
 
-class StormImpactInfo(BaseModel):
-    """Storm impact analysis"""
-    factor: float
-    description: str
-    aurora_likelihood: str
+class StormImpactInfo(CamelCaseModel):
+    """Storm impact analysis with dual-case field names"""
+    factor: float = Field(description="Storm impact multiplier (0.5-1.5)")
+    description: str = Field(description="Human-readable impact description")
+    aurora_likelihood: str = Field(description="Aurora visibility likelihood")
 
 
-class LocationAnalysis(BaseModel):
-    """Complete location analysis response"""
-    coordinates: dict
+class CoordinatesInfo(CamelCaseModel):
+    """Coordinate information"""
+    lat: float = Field(description="Latitude")
+    lng: float = Field(description="Longitude")
+
+
+class LocationAnalysisResponse(CamelCaseModel):
+    """Complete location analysis response with dual-case field names"""
+    coordinates: CoordinatesInfo
     geomagnetic: GeomagneticInfo
     storm_impact: StormImpactInfo
     timezone: Optional[TimezoneInfo] = None
 
 
-@router.post("/location", response_model=LocationAnalysis)
+# ============================================================================
+# API Endpoints
+# ============================================================================
+
+@router.post("/location")
 async def analyze_location(request: LocationRequest):
     """
-    Get geomagnetic impact analysis for coordinates
+    Get geomagnetic impact analysis for coordinates.
+
+    Analyzes the given coordinates and returns:
+    - Geomagnetic latitude and magnetic declination
+    - Storm impact factor and aurora likelihood
+    - Timezone information (if Google Maps API is configured)
+
+    All response fields are provided in both snake_case and camelCase formats.
+
+    Request Body:
+        lat: Latitude (-90 to 90)
+        lng: Longitude (-180 to 180)
+
+    Returns:
+        Standardized API response with location analysis data
     """
-    lat, lng = request.lat, request.lng
+    try:
+        lat, lng = request.lat, request.lng
 
-    # Validate coordinates
-    if lat < -90 or lat > 90 or lng < -180 or lng > 180:
-        raise HTTPException(
-            status_code=400,
-            detail="Coordinates out of valid range"
+        # Calculate geomagnetic properties
+        geomag_lat = calculate_geomagnetic_latitude(lat, lng)
+        declination = approximate_magnetic_declination(lat, lng)
+        storm_impact = get_storm_impact_factor(lat, lng)
+
+        # Build response data
+        analysis_data = {
+            "coordinates": {
+                "lat": lat,
+                "lng": lng
+            },
+            "geomagnetic": {
+                "latitude": geomag_lat,
+                "declination": declination
+            },
+            "storm_impact": {
+                "factor": storm_impact.factor,
+                "description": storm_impact.description,
+                "aurora_likelihood": storm_impact.aurora_likelihood
+            }
+        }
+
+        # Get timezone if Google Maps is configured
+        timezone_cached = False
+        if is_google_maps_configured():
+            tz_result = await get_timezone(lat, lng)
+            if tz_result.success and tz_result.timezone_id:
+                analysis_data["timezone"] = {
+                    "id": tz_result.timezone_id,
+                    "name": tz_result.timezone_name or tz_result.timezone_id,
+                    "utc_offset": (tz_result.raw_offset or 0) + (tz_result.dst_offset or 0)
+                }
+                # Could implement caching for timezone lookups
+                timezone_cached = False
+
+        return success_response(
+            data=analysis_data,
+            cached=False,  # Calculations are computed on-demand
+            source="heliometric"
         )
 
-    # Calculate geomagnetic properties
-    geomag_lat = calculate_geomagnetic_latitude(lat, lng)
-    declination = approximate_magnetic_declination(lat, lng)
-    storm_impact = get_storm_impact_factor(lat, lng)
-
-    analysis = LocationAnalysis(
-        coordinates={"lat": lat, "lng": lng},
-        geomagnetic=GeomagneticInfo(
-            latitude=geomag_lat,
-            declination=declination
-        ),
-        storm_impact=StormImpactInfo(
-            factor=storm_impact.factor,
-            description=storm_impact.description,
-            aurora_likelihood=storm_impact.aurora_likelihood
+    except ValueError as e:
+        return error_response(
+            code=ErrorCodes.VALIDATION_ERROR,
+            message=str(e),
+            status_code=400
         )
-    )
-
-    # Get timezone if Google Maps is configured
-    if is_google_maps_configured():
-        tz_result = await get_timezone(lat, lng)
-        if tz_result.success and tz_result.timezone_id:
-            analysis.timezone = TimezoneInfo(
-                id=tz_result.timezone_id,
-                name=tz_result.timezone_name or tz_result.timezone_id,
-                utc_offset=(tz_result.raw_offset or 0) + (tz_result.dst_offset or 0)
-            )
-
-    return analysis
+    except Exception as e:
+        return error_response(
+            code=ErrorCodes.INTERNAL_ERROR,
+            message="Failed to analyze location",
+            status_code=500,
+            details={"error": str(e)}
+        )
 
 
 @router.get("/location")
 async def location_info():
-    """Get endpoint information"""
-    return {
-        "endpoint": "POST /api/location",
-        "body": {"lat": "number", "lng": "number"},
-        "description": "Get geomagnetic impact analysis for coordinates"
-    }
+    """
+    Get endpoint information and configuration status.
+
+    Returns information about the location analysis endpoint
+    including whether timezone lookup is available.
+    """
+    return success_response(
+        data={
+            "endpoint": "POST /api/location",
+            "method": "POST",
+            "body": {
+                "lat": "number (required, -90 to 90)",
+                "lng": "number (required, -180 to 180)"
+            },
+            "description": "Get geomagnetic impact analysis for coordinates",
+            "timezone_available": is_google_maps_configured(),
+            "features": [
+                "geomagnetic_latitude",
+                "magnetic_declination",
+                "storm_impact_factor",
+                "aurora_likelihood",
+                "timezone_lookup"
+            ]
+        },
+        source="documentation"
+    )
