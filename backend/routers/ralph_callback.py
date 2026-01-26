@@ -16,7 +16,7 @@ from fastapi import APIRouter, Request, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from services import ralph_monitor
-from services.ralph_monitor import APP_VERSION, APP_NAME, get_uptime_seconds
+from services.ralph_monitor import APP_VERSION, APP_NAME, CLIENT_VERSION, get_uptime_seconds
 
 logger = logging.getLogger(__name__)
 
@@ -500,6 +500,34 @@ async def ralph_callback(
                 "data": metrics
             }
 
+        elif request_type == "update_check":
+            # Check for Ralph SDK updates
+            update_info = await ralph_monitor.check_for_updates_async()
+
+            return {
+                "request_id": request_id,
+                "status": "success",
+                "data": {
+                    "client_version": CLIENT_VERSION,
+                    "app_version": APP_VERSION,
+                    "update_info": update_info
+                }
+            }
+
+        elif request_type == "version_info":
+            # Return version information
+            return {
+                "request_id": request_id,
+                "status": "success",
+                "data": {
+                    "app_name": APP_NAME,
+                    "app_version": APP_VERSION,
+                    "client_version": CLIENT_VERSION,
+                    "uptime_seconds": get_uptime_seconds(),
+                    "config": ralph_monitor.get_config_status()
+                }
+            }
+
         else:
             logger.warning(f"Unknown Ralph request type: {request_type}")
             return {
@@ -529,9 +557,13 @@ async def ralph_callback_info():
             "log_analysis",
             "schema_request",
             "test_data",
-            "metrics"
+            "metrics",
+            "update_check",
+            "version_info"
         ],
         "authentication": "HMAC-SHA256 signature via X-Ralph-Signature header",
         "project_id": ralph_monitor.PROJECT_ID,
+        "client_version": CLIENT_VERSION,
+        "app_version": APP_VERSION,
         "configured": ralph_monitor.is_configured()
     }
