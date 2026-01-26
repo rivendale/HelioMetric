@@ -1,9 +1,13 @@
 /**
  * Location Analysis API Route
  * POST /api/location - Get geomagnetic impact analysis for coordinates
+ *
+ * Returns geomagnetic latitude, magnetic declination, storm impact analysis,
+ * and optional timezone information. All fields are provided in both
+ * snake_case and camelCase formats for client compatibility.
  */
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import {
   getTimezone,
   getStormImpactFactor,
@@ -11,6 +15,16 @@ import {
   approximateMagneticDeclination,
   isGoogleMapsConfigured,
 } from '@/lib/maps';
+import {
+  successResponse,
+  validationError,
+  internalError,
+  addDualCaseAliases,
+} from '@/lib/api-utils';
+
+// ============================================================================
+// Type Definitions
+// ============================================================================
 
 export interface LocationAnalysis {
   coordinates: {
@@ -21,7 +35,13 @@ export interface LocationAnalysis {
     latitude: number;
     declination: number;
   };
-  stormImpact: {
+  storm_impact: {
+    factor: number;
+    description: string;
+    aurora_likelihood: string;
+  };
+  // camelCase aliases
+  stormImpact?: {
     factor: number;
     description: string;
     auroraLikelihood: string;
@@ -29,26 +49,43 @@ export interface LocationAnalysis {
   timezone?: {
     id: string;
     name: string;
-    utcOffset: number;
+    utc_offset: number;
+    utcOffset?: number;
   };
 }
+
+// ============================================================================
+// API Handlers
+// ============================================================================
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { lat, lng } = body;
 
+    // Type validation
     if (typeof lat !== 'number' || typeof lng !== 'number') {
-      return NextResponse.json(
-        { error: 'Valid lat and lng coordinates are required' },
-        { status: 400 }
+      return validationError(
+        'Valid lat and lng coordinates are required',
+        'coordinates',
+        { received: { lat: typeof lat, lng: typeof lng } }
       );
     }
 
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      return NextResponse.json(
-        { error: 'Coordinates out of valid range' },
-        { status: 400 }
+    // Range validation
+    if (lat < -90 || lat > 90) {
+      return validationError(
+        'Latitude must be between -90 and 90',
+        'lat',
+        { received: lat, valid_range: [-90, 90] }
+      );
+    }
+
+    if (lng < -180 || lng > 180) {
+      return validationError(
+        'Longitude must be between -180 and 180',
+        'lng',
+        { received: lng, valid_range: [-180, 180] }
       );
     }
 
@@ -57,41 +94,66 @@ export async function POST(request: NextRequest) {
     const declination = approximateMagneticDeclination(lat, lng);
     const stormImpact = getStormImpactFactor(lat, lng);
 
-    const analysis: LocationAnalysis = {
+    // Build analysis data with dual-case field names
+    const analysisData: Record<string, unknown> = {
       coordinates: { lat, lng },
       geomagnetic: {
         latitude: geomagLat,
         declination,
       },
-      stormImpact,
+      storm_impact: {
+        factor: stormImpact.factor,
+        description: stormImpact.description,
+        aurora_likelihood: stormImpact.auroraLikelihood,
+      },
     };
 
     // Get timezone if Google Maps is configured
     if (isGoogleMapsConfigured()) {
       const tzResult = await getTimezone(lat, lng);
       if (tzResult.success && tzResult.timezoneId) {
-        analysis.timezone = {
+        analysisData.timezone = {
           id: tzResult.timezoneId,
           name: tzResult.timezoneName || tzResult.timezoneId,
-          utcOffset: (tzResult.rawOffset || 0) + (tzResult.dstOffset || 0),
+          utc_offset: (tzResult.rawOffset || 0) + (tzResult.dstOffset || 0),
         };
       }
     }
 
-    return NextResponse.json(analysis);
+    // Add dual-case aliases and return
+    return successResponse(addDualCaseAliases(analysisData), {
+      cached: false,
+      source: 'heliometric',
+    });
   } catch (error) {
     console.error('Location analysis error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+    return internalError(
+      'Failed to analyze location',
+      { error: error instanceof Error ? error.message : 'Unknown error' }
     );
   }
 }
 
 export async function GET() {
-  return NextResponse.json({
-    endpoint: 'POST /api/location',
-    body: { lat: 'number', lng: 'number' },
-    description: 'Get geomagnetic impact analysis for coordinates',
-  });
+  return successResponse(
+    {
+      endpoint: 'POST /api/location',
+      method: 'POST',
+      body: {
+        lat: 'number (required, -90 to 90)',
+        lng: 'number (required, -180 to 180)',
+      },
+      description: 'Get geomagnetic impact analysis for coordinates',
+      timezone_available: isGoogleMapsConfigured(),
+      response_format: 'Dual-case (snake_case and camelCase)',
+      features: [
+        'geomagnetic_latitude',
+        'magnetic_declination',
+        'storm_impact_factor',
+        'aurora_likelihood',
+        'timezone_lookup',
+      ],
+    },
+    { source: 'documentation' }
+  );
 }

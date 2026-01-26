@@ -1,50 +1,63 @@
 """
 Google Maps Geocoding Service
 Provides location-based features for correlating heliospheric data with geography
+
+All response models include both snake_case and camelCase field aliases.
 """
 
 import os
 import math
 from typing import Optional, Literal
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
+from pydantic.alias_generators import to_camel
 
 from services.redis_cache import get_cached, set_cached, CacheKeys, CacheTTL
 
 
-class GeoLocation(BaseModel):
-    """Geocoded location data"""
-    lat: float
-    lng: float
-    formatted_address: str
-    place_id: str
-    timezone: Optional[str] = None
-    magnetic_declination: Optional[float] = None
+class DualCaseModel(BaseModel):
+    """Base model providing both snake_case and camelCase field names"""
+    model_config = ConfigDict(
+        populate_by_name=True,
+        alias_generator=to_camel,
+    )
 
 
-class GeocodeResult(BaseModel):
-    """Geocoding result"""
-    success: bool
-    location: Optional[GeoLocation] = None
-    error: Optional[str] = None
-    cached: bool = False
+class GeoLocation(DualCaseModel):
+    """Geocoded location data with dual-case field names"""
+    lat: float = Field(description="Latitude")
+    lng: float = Field(description="Longitude")
+    formatted_address: str = Field(description="Full formatted address")
+    place_id: str = Field(description="Google Place ID")
+    timezone: Optional[str] = Field(default=None, description="Timezone ID")
+    magnetic_declination: Optional[float] = Field(default=None, description="Magnetic declination in degrees")
 
 
-class TimezoneResult(BaseModel):
-    """Timezone lookup result"""
-    success: bool
-    timezone_id: Optional[str] = None
-    timezone_name: Optional[str] = None
-    raw_offset: Optional[int] = None
-    dst_offset: Optional[int] = None
-    error: Optional[str] = None
+class GeocodeResult(DualCaseModel):
+    """Geocoding result with dual-case field names"""
+    success: bool = Field(description="Whether geocoding succeeded")
+    location: Optional[GeoLocation] = Field(default=None, description="Location data if successful")
+    error: Optional[str] = Field(default=None, description="Error message if failed")
+    cached: bool = Field(default=False, description="Whether result was from cache")
 
 
-class StormImpact(BaseModel):
-    """Storm impact analysis for a location"""
-    factor: float
-    description: str
-    aurora_likelihood: Literal["none", "rare", "possible", "likely", "very_likely"]
+class TimezoneResult(DualCaseModel):
+    """Timezone lookup result with dual-case field names"""
+    success: bool = Field(description="Whether lookup succeeded")
+    timezone_id: Optional[str] = Field(default=None, description="Timezone ID (e.g., 'America/New_York')")
+    timezone_name: Optional[str] = Field(default=None, description="Display name")
+    raw_offset: Optional[int] = Field(default=None, description="Raw UTC offset in seconds")
+    dst_offset: Optional[int] = Field(default=None, description="DST offset in seconds")
+    error: Optional[str] = Field(default=None, description="Error message if failed")
+
+
+class StormImpact(DualCaseModel):
+    """Storm impact analysis for a location with dual-case field names"""
+    factor: float = Field(description="Storm impact multiplier (0.5-1.5)")
+    description: str = Field(description="Human-readable impact description")
+    aurora_likelihood: Literal["none", "rare", "possible", "likely", "very_likely"] = Field(
+        description="Aurora visibility likelihood"
+    )
 
 
 def is_google_maps_configured() -> bool:

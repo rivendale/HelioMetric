@@ -9,33 +9,59 @@ K-Index Scale (0-9):
 7: Strong storm
 8: Severe storm
 9: Extreme storm
+
+All response models include both snake_case and camelCase field aliases.
 """
 
 import math
 import random
 from datetime import datetime
-from typing import List, Literal
+from typing import List, Literal, Optional
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
+from pydantic.alias_generators import to_camel
 
 from services.redis_cache import get_or_compute, CacheKeys, CacheTTL
 
 
-class KIndexReading(BaseModel):
-    """Single K-Index reading"""
-    time_tag: str
-    kp_index: float
-    observed_time: datetime
+class DualCaseModel(BaseModel):
+    """Base model providing both snake_case and camelCase field names"""
+    model_config = ConfigDict(
+        populate_by_name=True,
+        alias_generator=to_camel,
+    )
+
+    def model_dump_dual(self, **kwargs) -> dict:
+        """Dump model with both snake_case and camelCase fields"""
+        snake_dict = self.model_dump(by_alias=False, **kwargs)
+        result = {}
+        for key, value in snake_dict.items():
+            result[key] = value
+            # Add camelCase alias
+            camel_key = ''.join(
+                word.capitalize() if i > 0 else word
+                for i, word in enumerate(key.split('_'))
+            )
+            if camel_key != key:
+                result[camel_key] = value
+        return result
 
 
-class NOAASpaceWeatherData(BaseModel):
-    """Complete NOAA space weather response"""
-    latest: KIndexReading
-    readings: List[KIndexReading]
-    average_kp: float
-    max_kp: float
-    status: Literal["quiet", "unsettled", "storm"]
-    is_simulated: bool = False
+class KIndexReading(DualCaseModel):
+    """Single K-Index reading with dual-case field names"""
+    time_tag: str = Field(description="Timestamp from NOAA")
+    kp_index: float = Field(description="K-Index value (0-9)")
+    observed_time: datetime = Field(description="Parsed observation time")
+
+
+class NOAASpaceWeatherData(DualCaseModel):
+    """Complete NOAA space weather response with dual-case field names"""
+    latest: KIndexReading = Field(description="Most recent K-Index reading")
+    readings: List[KIndexReading] = Field(description="Array of recent readings")
+    average_kp: float = Field(description="Average K-Index value")
+    max_kp: float = Field(description="Maximum K-Index value")
+    status: Literal["quiet", "unsettled", "storm"] = Field(description="Storm status")
+    is_simulated: bool = Field(default=False, description="True if using mock data")
 
 
 def get_storm_status(kp: float) -> Literal["quiet", "unsettled", "storm"]:
