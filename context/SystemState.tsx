@@ -10,17 +10,55 @@ import React, {
   type ReactNode
 } from 'react';
 import { getZodiacSign, type ZodiacSign, timeDecoder } from '@/lib/HelioEngine';
+import { getWesternZodiacFromDate, type WesternZodiacSign } from '@/data/western-zodiac';
 
-// Node Types
+// Relationship types for family/social mapping
+export type RelationshipType =
+  | 'Self'
+  | 'Partner'
+  | 'Spouse'
+  | 'Parent'
+  | 'Child'
+  | 'Sibling'
+  | 'Grandparent'
+  | 'Grandchild'
+  | 'Friend'
+  | 'Colleague'
+  | 'Other';
+
+export const RELATIONSHIP_LABELS: Record<RelationshipType, string> = {
+  Self: 'Self (You)',
+  Partner: 'Partner',
+  Spouse: 'Spouse',
+  Parent: 'Parent',
+  Child: 'Child',
+  Sibling: 'Sibling',
+  Grandparent: 'Grandparent',
+  Grandchild: 'Grandchild',
+  Friend: 'Friend',
+  Colleague: 'Colleague',
+  Other: 'Other',
+};
+
+export const RELATIONSHIP_OPTIONS: RelationshipType[] = [
+  'Self', 'Partner', 'Spouse', 'Parent', 'Child',
+  'Sibling', 'Grandparent', 'Grandchild', 'Friend', 'Colleague', 'Other',
+];
+
+// Node Types (legacy compat + new)
 export type NodeRole = 'Primary' | 'Dependent';
 
 export interface FamilyNode {
   id: string;
   name: string;
   birthYear: number;
+  birthDate?: string; // ISO date string (YYYY-MM-DD) for full DOB
+  birthTime?: string; // HH:mm format, optional
   birthHour?: number; // 0-23, optional for more precise calculations
   role: NodeRole;
-  zodiacSign: ZodiacSign;
+  relationship: RelationshipType;
+  zodiacSign: ZodiacSign; // Chinese zodiac
+  westernZodiac?: WesternZodiacSign; // Western zodiac (derived from birthDate)
 }
 
 // Temporal State for Time Travel
@@ -39,8 +77,8 @@ export interface SystemState {
 
 // Actions
 type SystemAction =
-  | { type: 'ADD_NODE'; payload: Omit<FamilyNode, 'id' | 'zodiacSign'> }
-  | { type: 'UPDATE_NODE'; payload: { id: string; updates: Partial<Omit<FamilyNode, 'id' | 'zodiacSign'>> } }
+  | { type: 'ADD_NODE'; payload: Omit<FamilyNode, 'id' | 'zodiacSign' | 'westernZodiac'> }
+  | { type: 'UPDATE_NODE'; payload: { id: string; updates: Partial<Omit<FamilyNode, 'id' | 'zodiacSign' | 'westernZodiac'>> } }
   | { type: 'REMOVE_NODE'; payload: string }
   | { type: 'REORDER_NODES'; payload: FamilyNode[] }
   | { type: 'HYDRATE'; payload: SystemState }
@@ -56,12 +94,27 @@ function generateId(): string {
   return `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-// Create node with derived zodiac
-function createNode(data: Omit<FamilyNode, 'id' | 'zodiacSign'>): FamilyNode {
+// Derive western zodiac from birth date string
+function deriveWesternZodiac(birthDate?: string): WesternZodiacSign | undefined {
+  if (!birthDate) return undefined;
+  try {
+    const date = new Date(birthDate + 'T12:00:00');
+    if (isNaN(date.getTime())) return undefined;
+    return getWesternZodiacFromDate(date);
+  } catch {
+    return undefined;
+  }
+}
+
+// Create node with derived zodiac signs
+function createNode(data: Omit<FamilyNode, 'id' | 'zodiacSign' | 'westernZodiac'>): FamilyNode {
+  const birthDate = data.birthDate ? new Date(data.birthDate + 'T12:00:00') : undefined;
   return {
     ...data,
     id: generateId(),
-    zodiacSign: getZodiacSign(data.birthYear),
+    relationship: data.relationship || 'Other',
+    zodiacSign: getZodiacSign(data.birthYear, birthDate),
+    westernZodiac: deriveWesternZodiac(data.birthDate),
   };
 }
 
@@ -74,21 +127,11 @@ function createDefaultTemporal(): TemporalConfig {
   };
 }
 
-// Default state with Rabbit parent and 4 dependents
+// Default state - empty, ready for user to add their own people
 function createDefaultState(): SystemState {
-  const currentYear = new Date().getFullYear();
-
-  // Rabbit years: 1951, 1963, 1975, 1987, 1999, 2011, 2023
-  // Using 1987 for a parent in their late 30s
-  const rabbitYear = 1987;
-
   return {
     nodes: [
-      createNode({ name: 'Parent (Rabbit)', birthYear: rabbitYear, role: 'Primary' }),
-      createNode({ name: 'Dependent 1', birthYear: currentYear - 15, role: 'Dependent' }),
-      createNode({ name: 'Dependent 2', birthYear: currentYear - 12, role: 'Dependent' }),
-      createNode({ name: 'Dependent 3', birthYear: currentYear - 9, role: 'Dependent' }),
-      createNode({ name: 'Dependent 4', birthYear: currentYear - 6, role: 'Dependent' }),
+      createNode({ name: 'You', birthYear: 1990, birthDate: '1990-06-15', role: 'Primary', relationship: 'Self' }),
     ],
     lastUpdated: Date.now(),
     temporal: createDefaultTemporal(),
@@ -138,9 +181,16 @@ function systemReducer(state: SystemState, action: SystemAction): SystemState {
           if (node.id !== id) return node;
 
           const updatedNode = { ...node, ...updates };
-          // Recalculate zodiac if birth year changed
-          if (updates.birthYear !== undefined) {
-            updatedNode.zodiacSign = getZodiacSign(updates.birthYear);
+          // Recalculate zodiac if birth year or date changed
+          if (updates.birthYear !== undefined || updates.birthDate !== undefined) {
+            const birthDate = updatedNode.birthDate
+              ? new Date(updatedNode.birthDate + 'T12:00:00')
+              : undefined;
+            updatedNode.zodiacSign = getZodiacSign(
+              updates.birthYear ?? node.birthYear,
+              birthDate
+            );
+            updatedNode.westernZodiac = deriveWesternZodiac(updatedNode.birthDate);
           }
           return updatedNode;
         }),
@@ -170,7 +220,12 @@ function systemReducer(state: SystemState, action: SystemAction): SystemState {
         ...action.payload,
         nodes: action.payload.nodes.map((node) => ({
           ...node,
-          zodiacSign: getZodiacSign(node.birthYear),
+          relationship: node.relationship || (node.role === 'Primary' ? 'Self' : 'Other'),
+          zodiacSign: getZodiacSign(
+            node.birthYear,
+            node.birthDate ? new Date(node.birthDate + 'T12:00:00') : undefined
+          ),
+          westernZodiac: deriveWesternZodiac(node.birthDate),
         })),
         temporal: action.payload.temporal || createDefaultTemporal(),
       };
@@ -221,8 +276,8 @@ function systemReducer(state: SystemState, action: SystemAction): SystemState {
 // Context
 interface SystemContextValue {
   state: SystemState;
-  addNode: (data: Omit<FamilyNode, 'id' | 'zodiacSign'>) => void;
-  updateNode: (id: string, updates: Partial<Omit<FamilyNode, 'id' | 'zodiacSign'>>) => void;
+  addNode: (data: Omit<FamilyNode, 'id' | 'zodiacSign' | 'westernZodiac'>) => void;
+  updateNode: (id: string, updates: Partial<Omit<FamilyNode, 'id' | 'zodiacSign' | 'westernZodiac'>>) => void;
   removeNode: (id: string) => void;
   reorderNodes: (nodes: FamilyNode[]) => void;
   resetToDefault: () => void;
@@ -291,11 +346,11 @@ export function SystemStateProvider({ children }: { children: ReactNode }) {
   }, [state.temporal.isRealTimeMode]);
 
   // Action dispatchers
-  const addNode = useCallback((data: Omit<FamilyNode, 'id' | 'zodiacSign'>) => {
+  const addNode = useCallback((data: Omit<FamilyNode, 'id' | 'zodiacSign' | 'westernZodiac'>) => {
     dispatch({ type: 'ADD_NODE', payload: data });
   }, []);
 
-  const updateNode = useCallback((id: string, updates: Partial<Omit<FamilyNode, 'id' | 'zodiacSign'>>) => {
+  const updateNode = useCallback((id: string, updates: Partial<Omit<FamilyNode, 'id' | 'zodiacSign' | 'westernZodiac'>>) => {
     dispatch({ type: 'UPDATE_NODE', payload: { id, updates } });
   }, []);
 
@@ -367,8 +422,10 @@ export function useFamilyMembers() {
 
   return {
     all: state.nodes,
+    self: state.nodes.find((n) => n.relationship === 'Self'),
     primaries: state.nodes.filter((n) => n.role === 'Primary'),
     dependents: state.nodes.filter((n) => n.role === 'Dependent'),
+    byRelationship: (rel: RelationshipType) => state.nodes.filter((n) => n.relationship === rel),
     byElement: (element: string) => state.nodes.filter((n) => n.zodiacSign.element === element),
   };
 }

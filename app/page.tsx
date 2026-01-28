@@ -26,7 +26,7 @@ export default async function Home() {
             HelioMetric Instrument Panel
           </h1>
           <p className="text-gray-400 text-sm sm:text-base">
-            Evergreen Temporal Analysis Engine • NOAA Space Weather Integration
+            Chinese & Western Zodiac • Relationship Compatibility • NOAA Space Weather
           </p>
         </div>
       </header>
@@ -96,11 +96,11 @@ export default async function Home() {
         {/* Footer */}
         <footer className="text-center text-xs text-gray-500 pt-8 pb-4">
           <p>
-            HelioMetric v0.3.0 • Evergreen Engine • AGPL-3.0 License •
+            HelioMetric v0.4.0 • Dual Zodiac Engine • AGPL-3.0 License •
             Data: NOAA Space Weather Prediction Center
           </p>
           <p className="mt-1">
-            Heliospheric correlation framework using Wu Xing elemental theory •
+            Chinese & Western Zodiac • Wu Xing Elements • Relationship Mapping •
             Li Chun-Accurate Temporal Calculations
           </p>
         </footer>

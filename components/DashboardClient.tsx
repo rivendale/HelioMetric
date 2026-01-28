@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { SystemStateProvider, useSystemState, useTemporalState } from '@/context/SystemState';
+import React, { useMemo, useState } from 'react';
+import { SystemStateProvider, useSystemState, useTemporalState, useFamilyMembers } from '@/context/SystemState';
 import { TimeControl } from './TimeControl';
 import { CommandConsole } from './CommandConsole';
-import { TacticalDeck } from './TacticalDeck';
-import { MarketSensor } from './MarketSensor';
+import { PersonManager } from './PersonManager';
+import { ZodiacExplorer } from './ZodiacExplorer';
+import { RelationshipMap } from './RelationshipMap';
+import { ZodiacProfileCard } from './ZodiacProfileCard';
 import { LocationSensor } from './LocationSensor';
 import {
   calculateFamilyResonance,
@@ -13,11 +15,30 @@ import {
   type FamilyMember,
   type EnvironmentalVector
 } from '@/lib/HelioEngine';
+import {
+  Users,
+  Search,
+  GitCompareArrows,
+  Activity,
+  MapPin,
+  User,
+} from 'lucide-react';
 
 interface DashboardClientProps {
   kIndex: number;
   kIndexTimestamp: Date;
 }
+
+type DashboardTab = 'people' | 'profiles' | 'compatibility' | 'explorer' | 'analysis' | 'location';
+
+const TAB_CONFIG: { id: DashboardTab; label: string; icon: React.ReactNode; shortLabel: string }[] = [
+  { id: 'people', label: 'People', shortLabel: 'People', icon: <Users className="w-4 h-4" /> },
+  { id: 'profiles', label: 'Zodiac Profiles', shortLabel: 'Profiles', icon: <User className="w-4 h-4" /> },
+  { id: 'compatibility', label: 'Compatibility', shortLabel: 'Compat', icon: <GitCompareArrows className="w-4 h-4" /> },
+  { id: 'explorer', label: 'Zodiac Explorer', shortLabel: 'Explorer', icon: <Search className="w-4 h-4" /> },
+  { id: 'analysis', label: 'Analysis', shortLabel: 'Analysis', icon: <Activity className="w-4 h-4" /> },
+  { id: 'location', label: 'Location', shortLabel: 'Location', icon: <MapPin className="w-4 h-4" /> },
+];
 
 /**
  * DashboardClient: Client-side dashboard with temporal awareness
@@ -37,6 +58,8 @@ export function DashboardClient({ kIndex, kIndexTimestamp }: DashboardClientProp
 function DashboardContent({ kIndex, kIndexTimestamp }: DashboardClientProps) {
   const { state } = useSystemState();
   const { globalDate, temporalState } = useTemporalState();
+  const { all: allNodes } = useFamilyMembers();
+  const [activeTab, setActiveTab] = useState<DashboardTab>('people');
 
   // Convert system nodes to FamilyMember format for the engine
   const familyMembers: FamilyMember[] = useMemo(() => {
@@ -63,30 +86,78 @@ function DashboardContent({ kIndex, kIndexTimestamp }: DashboardClientProps) {
       {/* Temporal Controls - The "Seeker" Bar */}
       <TimeControl />
 
-      {/* Family Resonance Field */}
-      {familyResonance && (
-        <ResonanceField
-          resonance={familyResonance}
-          environmentalVector={familyResonance.environmentalVector}
-        />
-      )}
+      {/* Tab Navigation */}
+      <nav className="bg-gray-900 border border-gray-800 rounded-lg p-1.5 flex gap-1 overflow-x-auto">
+        {TAB_CONFIG.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`
+              flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium whitespace-nowrap transition-all
+              ${activeTab === tab.id
+                ? 'bg-cyan-900/40 text-cyan-300 border border-cyan-800/50'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50 border border-transparent'
+              }
+            `}
+          >
+            {tab.icon}
+            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sm:hidden">{tab.shortLabel}</span>
+            {tab.id === 'people' && (
+              <span className="ml-1 text-xs bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded-full">
+                {allNodes.length}
+              </span>
+            )}
+          </button>
+        ))}
+      </nav>
 
-      {/* Command Console - System Dynamics Layer */}
-      <CommandConsole
-        kIndex={kIndex}
-        yearElement={temporalState.yearElement}
-      />
+      {/* Tab Content */}
+      <div className="min-h-[400px]">
+        {activeTab === 'people' && <PersonManager />}
 
-      {/* Tactical Deck - Protocol Cards */}
-      <TacticalDeck kIndex={kIndex} />
+        {activeTab === 'profiles' && (
+          <div className="space-y-4">
+            {allNodes.length === 0 ? (
+              <div className="bg-gray-900 border border-gray-800 rounded-lg p-6 text-center py-12">
+                <User className="w-12 h-12 text-gray-700 mx-auto mb-3" />
+                <p className="text-gray-500">Add people in the People tab to see their zodiac profiles.</p>
+              </div>
+            ) : (
+              allNodes.map((node) => (
+                <ZodiacProfileCard key={node.id} node={node} />
+              ))
+            )}
+          </div>
+        )}
 
-      {/* Sensor Grid - Market & Location Analysis */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <MarketSensor
-          yearElement={temporalState.yearElement}
-          kIndex={kIndex}
-        />
-        <LocationSensor kIndex={kIndex} />
+        {activeTab === 'compatibility' && <RelationshipMap />}
+
+        {activeTab === 'explorer' && <ZodiacExplorer />}
+
+        {activeTab === 'analysis' && (
+          <>
+            {/* Family Resonance Field */}
+            {familyResonance && (
+              <ResonanceField
+                resonance={familyResonance}
+                environmentalVector={familyResonance.environmentalVector}
+              />
+            )}
+
+            {/* Command Console - System Dynamics Layer */}
+            <div className="mt-6">
+              <CommandConsole
+                kIndex={kIndex}
+                yearElement={temporalState.yearElement}
+              />
+            </div>
+          </>
+        )}
+
+        {activeTab === 'location' && (
+          <LocationSensor kIndex={kIndex} />
+        )}
       </div>
     </>
   );

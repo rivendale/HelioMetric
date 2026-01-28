@@ -229,7 +229,7 @@ export function createSuccessResponse<T>(
   return {
     success: true,
     data: processedData as T,
-    meta: addDualCaseAliases(meta as Record<string, unknown>) as APIMeta,
+    meta: addDualCaseAliases(meta as unknown as Record<string, unknown>) as unknown as APIMeta,
   };
 }
 
@@ -265,7 +265,7 @@ export function createErrorResponse(
   return {
     success: false,
     error,
-    meta: addDualCaseAliases(meta as Record<string, unknown>) as APIMeta,
+    meta: addDualCaseAliases(meta as unknown as Record<string, unknown>) as unknown as APIMeta,
   };
 }
 
