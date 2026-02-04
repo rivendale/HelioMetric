@@ -21,6 +21,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from routers import noaa, location, geocode
 from routers.ralph_callback import router as ralph_callback_router, setup_ralph_logging
+from routers.research import router as research_router
+from services.task_scheduler import task_scheduler
 from utils.responses import success_response, error_response, ErrorCodes
 from services import ralph_monitor
 from middleware.ralph_error import RalphErrorMiddleware
@@ -157,10 +159,18 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Ralph monitoring not configured - skipping registration")
 
+    # Start the task scheduler
+    task_scheduler.start()
+    logger.info("Research task scheduler started")
+
     yield
 
     # ==================== SHUTDOWN ====================
     logger.info("HelioMetric shutting down...")
+
+    # Stop the task scheduler
+    task_scheduler.stop()
+    logger.info("Research task scheduler stopped")
 
     # Send shutdown event to Ralph
     if ralph_monitor.is_configured():
@@ -214,6 +224,7 @@ app.include_router(noaa.router, prefix="/api", tags=["NOAA"])
 app.include_router(location.router, prefix="/api", tags=["Location"])
 app.include_router(geocode.router, prefix="/api", tags=["Geocode"])
 app.include_router(ralph_callback_router, prefix="/api", tags=["Ralph Monitoring"])
+app.include_router(research_router, tags=["Research Agent"])
 
 
 # ============================================================================
@@ -288,6 +299,21 @@ async def api_info():
                     "path": "/api/ralph-callback",
                     "method": "POST",
                     "description": "Ralph Agent monitoring callback"
+                },
+                {
+                    "path": "/api/research/discuss",
+                    "method": "POST",
+                    "description": "Free-form discussion with research agent"
+                },
+                {
+                    "path": "/api/research/skill",
+                    "method": "POST",
+                    "description": "Execute a specific research skill"
+                },
+                {
+                    "path": "/api/research/tasks",
+                    "method": "GET/POST",
+                    "description": "Manage scheduled research tasks"
                 },
                 {
                     "path": "/health",
