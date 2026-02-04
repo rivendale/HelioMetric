@@ -13,12 +13,12 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from ..services.research_agent import (
+from services.research_agent import (
     research_agent,
     SkillType,
     ResearchSession,
 )
-from ..services.task_scheduler import (
+from services.task_scheduler import (
     task_scheduler,
     ScheduleType,
     ScheduledTask,
