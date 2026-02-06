@@ -19,6 +19,7 @@ Environment Variables:
 """
 
 import os
+import sys
 import json
 import hmac
 import hashlib
@@ -198,13 +199,14 @@ def _get(url: str, timeout: float = 10.0) -> dict:
                     return {"status": "error", "error": "Forbidden - check RALPH_MONITOR_SECRET"}
                 return response.json()
         else:
-            req = urllib.request.Request(url, headers=headers, method="GET")
-            with urllib.request.urlopen(req, timeout=int(timeout)) as resp:
-                return json.loads(resp.read().decode())
-    except urllib.error.HTTPError as e:
-        if e.code == 403:
-            return {"status": "error", "error": "Forbidden - check RALPH_MONITOR_SECRET"}
-        return {"status": "error", "error": str(e)}
+            try:
+                req = urllib.request.Request(url, headers=headers, method="GET")
+                with urllib.request.urlopen(req, timeout=int(timeout)) as resp:
+                    return json.loads(resp.read().decode())
+            except urllib.error.HTTPError as e:
+                if e.code == 403:
+                    return {"status": "error", "error": "Forbidden - check RALPH_MONITOR_SECRET"}
+                return {"status": "error", "error": str(e)}
     except Exception as e:
         logger.warning(f"Ralph GET request to {url} failed: {e}")
         return {"status": "error", "error": str(e)}
@@ -455,7 +457,7 @@ def register_with_ralph(
         "metadata": {
             "version": APP_VERSION,
             "framework": "FastAPI",
-            "python_version": f"{__import__('sys').version_info.major}.{__import__('sys').version_info.minor}",
+            "python_version": f"{sys.version_info.major}.{sys.version_info.minor}",
             **(metadata or {})
         }
     }

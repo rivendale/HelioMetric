@@ -6,7 +6,8 @@ Provides geocoding functionality using Google Maps API with Redis caching.
 Results are cached for 30 days to reduce API costs and improve response times.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
 from services.maps import geocode_address, is_google_maps_configured
@@ -74,10 +75,13 @@ async def geocode(request: GeocodeRequest):
     try:
         # Check if service is configured
         if not is_google_maps_configured():
-            return error_response(
-                code=ErrorCodes.SERVICE_UNAVAILABLE,
-                message="Geocoding service not available. Google Maps API key not configured.",
-                status_code=503
+            return JSONResponse(
+                status_code=503,
+                content=error_response(
+                    code=ErrorCodes.SERVICE_UNAVAILABLE,
+                    message="Geocoding service not available. Google Maps API key not configured.",
+                    status_code=503
+                )
             )
 
         # Perform geocoding
@@ -92,11 +96,14 @@ async def geocode(request: GeocodeRequest):
                 error_code = ErrorCodes.EXTERNAL_API_ERROR
                 status_code = 502
 
-            return error_response(
-                code=error_code,
-                message=result.error or "No results found for this address",
+            return JSONResponse(
                 status_code=status_code,
-                details={"address": request.address}
+                content=error_response(
+                    code=error_code,
+                    message=result.error or "No results found for this address",
+                    status_code=status_code,
+                    details={"address": request.address}
+                )
             )
 
         # Build response with location data
@@ -113,18 +120,24 @@ async def geocode(request: GeocodeRequest):
         )
 
     except ValueError as e:
-        return error_response(
-            code=ErrorCodes.VALIDATION_ERROR,
-            message=str(e),
+        return JSONResponse(
             status_code=400,
-            field="address"
+            content=error_response(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=str(e),
+                status_code=400,
+                field="address"
+            )
         )
     except Exception as e:
-        return error_response(
-            code=ErrorCodes.INTERNAL_ERROR,
-            message="Geocoding request failed",
+        return JSONResponse(
             status_code=500,
-            details={"error": str(e)}
+            content=error_response(
+                code=ErrorCodes.INTERNAL_ERROR,
+                message="Geocoding request failed",
+                status_code=500,
+                details={"error": str(e)}
+            )
         )
 
 

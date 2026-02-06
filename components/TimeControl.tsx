@@ -101,7 +101,7 @@ export function TimeControl() {
       {/* Collapsed Header Bar */}
       <div
         className={`p-4 cursor-pointer transition-colors ${
-          isExpanded ? 'bg-gray-850' : 'hover:bg-gray-850'
+          isExpanded ? 'bg-gray-800' : 'hover:bg-gray-800'
         }`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -223,7 +223,7 @@ export function TimeControl() {
               </label>
               <input
                 type="date"
-                value={globalDate.toISOString().split('T')[0]}
+                value={`${globalDate.getFullYear()}-${String(globalDate.getMonth() + 1).padStart(2, '0')}-${String(globalDate.getDate()).padStart(2, '0')}`}
                 onChange={handleDateChange}
                 onClick={(e) => e.stopPropagation()}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded text-gray-100 font-[family-name:var(--font-geist-mono)] text-sm focus:outline-none focus:border-cyan-600 focus:ring-1 focus:ring-cyan-600"

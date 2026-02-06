@@ -7,8 +7,9 @@ and optional timezone information for given coordinates.
 """
 
 from typing import Optional
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 from services.maps import (
     calculate_geomagnetic_latitude,
@@ -35,20 +36,6 @@ class LocationRequest(BaseModel):
     """Location analysis request body"""
     lat: float = Field(..., ge=-90, le=90, description="Latitude (-90 to 90)")
     lng: float = Field(..., ge=-180, le=180, description="Longitude (-180 to 180)")
-
-    @field_validator('lat')
-    @classmethod
-    def validate_lat(cls, v: float) -> float:
-        if v < -90 or v > 90:
-            raise ValueError("Latitude must be between -90 and 90")
-        return v
-
-    @field_validator('lng')
-    @classmethod
-    def validate_lng(cls, v: float) -> float:
-        if v < -180 or v > 180:
-            raise ValueError("Longitude must be between -180 and 180")
-        return v
 
 
 class TimezoneInfo(CamelCaseModel):
@@ -134,7 +121,6 @@ async def analyze_location(request: LocationRequest):
         }
 
         # Get timezone if Google Maps is configured
-        timezone_cached = False
         if is_google_maps_configured():
             tz_result = await get_timezone(lat, lng)
             if tz_result.success and tz_result.timezone_id:
@@ -143,8 +129,6 @@ async def analyze_location(request: LocationRequest):
                     "name": tz_result.timezone_name or tz_result.timezone_id,
                     "utc_offset": (tz_result.raw_offset or 0) + (tz_result.dst_offset or 0)
                 }
-                # Could implement caching for timezone lookups
-                timezone_cached = False
 
         return success_response(
             data=analysis_data,
@@ -153,17 +137,23 @@ async def analyze_location(request: LocationRequest):
         )
 
     except ValueError as e:
-        return error_response(
-            code=ErrorCodes.VALIDATION_ERROR,
-            message=str(e),
-            status_code=400
+        return JSONResponse(
+            status_code=400,
+            content=error_response(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message=str(e),
+                status_code=400
+            )
         )
     except Exception as e:
-        return error_response(
-            code=ErrorCodes.INTERNAL_ERROR,
-            message="Failed to analyze location",
+        return JSONResponse(
             status_code=500,
-            details={"error": str(e)}
+            content=error_response(
+                code=ErrorCodes.INTERNAL_ERROR,
+                message="Failed to analyze location",
+                status_code=500,
+                details={"error": str(e)}
+            )
         )
 
 

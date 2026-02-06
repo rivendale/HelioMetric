@@ -81,14 +81,18 @@ export function LocationSensor({ kIndex, onLocationChange }: LocationSensorProps
 
       if (!geocodeRes.ok) {
         const data = await geocodeRes.json();
-        throw new Error(data.error || 'Failed to geocode address');
+        throw new Error(data.error?.message || 'Failed to geocode address');
       }
 
       const geocodeData = await geocodeRes.json();
+      const locationData = geocodeData.data?.location;
+      if (!locationData) {
+        throw new Error('No location data returned');
+      }
       const newLocation: LocationData = {
-        lat: geocodeData.location.lat,
-        lng: geocodeData.location.lng,
-        formattedAddress: geocodeData.location.formattedAddress,
+        lat: locationData.lat,
+        lng: locationData.lng,
+        formattedAddress: locationData.formattedAddress,
       };
 
       setLocation(newLocation);
@@ -103,7 +107,7 @@ export function LocationSensor({ kIndex, onLocationChange }: LocationSensorProps
 
       if (analysisRes.ok) {
         const analysisData = await analysisRes.json();
-        setAnalysis(analysisData);
+        setAnalysis(analysisData.data);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -144,7 +148,7 @@ export function LocationSensor({ kIndex, onLocationChange }: LocationSensorProps
 
           if (analysisRes.ok) {
             const analysisData = await analysisRes.json();
-            setAnalysis(analysisData);
+            setAnalysis(analysisData.data);
           }
         } catch {
           // Analysis is optional, don't set error

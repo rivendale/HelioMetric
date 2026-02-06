@@ -5,9 +5,11 @@ Provides caching for NOAA data and geocoding results
 
 import os
 import json
+import logging
 from typing import TypeVar, Optional, Callable, Any
-from datetime import timedelta
 import redis
+
+logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
 
@@ -40,10 +42,10 @@ def get_redis_client() -> Optional[redis.Redis]:
                 decode_responses=True
             )
             _redis_client.ping()
-            print("Redis connected successfully")
+            logger.info("Redis connected successfully")
             return _redis_client
         except Exception as e:
-            print(f"Redis connection failed: {e}")
+            logger.warning(f"Redis connection failed: {e}")
             return None
 
     # Try standard REDIS_URL
@@ -52,13 +54,13 @@ def get_redis_client() -> Optional[redis.Redis]:
         try:
             _redis_client = redis.from_url(standard_url, decode_responses=True)
             _redis_client.ping()
-            print("Redis connected successfully")
+            logger.info("Redis connected successfully")
             return _redis_client
         except Exception as e:
-            print(f"Redis connection failed: {e}")
+            logger.warning(f"Redis connection failed: {e}")
             return None
 
-    print("Redis not configured: No Redis URL provided")
+    logger.info("Redis not configured: No Redis URL provided")
     return None
 
 
@@ -91,7 +93,7 @@ async def get_cached(key: str) -> Optional[Any]:
             return json.loads(value)
         return None
     except Exception as e:
-        print(f"Redis GET error for key {key}: {e}")
+        logger.warning(f"Redis GET error for key {key}: {e}")
         return None
 
 
@@ -105,7 +107,7 @@ async def set_cached(key: str, value: Any, ttl_seconds: int) -> bool:
         client.setex(key, ttl_seconds, json.dumps(value, default=str))
         return True
     except Exception as e:
-        print(f"Redis SET error for key {key}: {e}")
+        logger.warning(f"Redis SET error for key {key}: {e}")
         return False
 
 

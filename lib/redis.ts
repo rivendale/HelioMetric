@@ -121,8 +121,8 @@ export async function getOrCompute<T>(
   // Compute fresh value
   const value = await computeFn();
 
-  // Store in cache (don't await - fire and forget)
-  setCached(key, value, ttlSeconds);
+  // Store in cache (fire and forget, catch errors to prevent unhandled rejections)
+  setCached(key, value, ttlSeconds).catch(() => {});
 
   return value;
 }
