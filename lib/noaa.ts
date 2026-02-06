@@ -73,7 +73,9 @@ async function fetchKIndexFromAPI(): Promise<NOAASpaceWeatherData> {
     const readings: KIndexReading[] = data
       .slice(1) // Skip header
       .filter((row: unknown): row is [string, number, string?] => {
-        return Array.isArray(row) && row[1] !== null && row[1] !== undefined;
+        return Array.isArray(row) && row.length >= 2
+          && typeof row[0] === 'string'
+          && row[1] !== null && row[1] !== undefined;
       })
       .map((row: [string, number, string?]) => ({
         timeTag: row[0],

@@ -15,6 +15,7 @@ All response models include both snake_case and camelCase field aliases.
 
 import math
 import random
+import logging
 from datetime import datetime
 from typing import List, Literal, Optional
 import httpx
@@ -22,6 +23,8 @@ from pydantic import BaseModel, Field, ConfigDict
 from pydantic.alias_generators import to_camel
 
 from services.redis_cache import get_or_compute, CacheKeys, CacheTTL
+
+logger = logging.getLogger(__name__)
 
 
 class DualCaseModel(BaseModel):
@@ -176,6 +179,8 @@ async def fetch_kindex_from_api() -> dict:
 
         latest = readings[0]
         valid_kp_values = [r["kp_index"] for r in readings if not math.isnan(r["kp_index"])]
+        if not valid_kp_values:
+            raise ValueError("All K-Index readings are NaN")
         average_kp = sum(valid_kp_values) / len(valid_kp_values)
         max_kp = max(valid_kp_values)
 
@@ -189,7 +194,7 @@ async def fetch_kindex_from_api() -> dict:
         }
 
     except Exception as e:
-        print(f"Error fetching K-Index from NOAA: {e}")
+        logger.warning(f"Error fetching K-Index from NOAA: {e}")
         return get_mock_kindex_data()
 
 

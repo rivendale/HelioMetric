@@ -8,21 +8,18 @@ Endpoints for the research agent and task scheduler:
 - Scheduled task management
 """
 
-from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from services.research_agent import (
     research_agent,
     SkillType,
-    ResearchSession,
 )
 from services.task_scheduler import (
     task_scheduler,
     ScheduleType,
     ScheduledTask,
-    TaskResult,
     create_daily_forecast_task,
     create_weekly_report_task,
     create_solar_term_alert_task,
@@ -400,18 +397,29 @@ async def get_task_results(task_id: str, limit: int = 10):
 # Task Template Endpoints
 # ============================================================================
 
+class DailyForecastRequest(BaseModel):
+    """Request body for creating a daily forecast task"""
+    session_id: str
+    profile_context: dict
+    hour: int = 9
+
+
+class WeeklyReportRequest(BaseModel):
+    """Request body for creating a weekly report task"""
+    session_id: str
+    subjects: list[dict]
+    day_of_week: int = 0
+    hour: int = 8
+
+
 @router.post("/tasks/templates/daily-forecast", response_model=TaskResponse)
-async def create_daily_forecast(
-    session_id: str,
-    profile_context: dict,
-    hour: int = 9,
-):
+async def create_daily_forecast(request: DailyForecastRequest):
     """Create a daily forecast task from template"""
     task = create_daily_forecast_task(
         task_scheduler,
-        profile_context,
-        session_id,
-        hour,
+        request.profile_context,
+        request.session_id,
+        request.hour,
     )
     return TaskResponse(
         task_id=task.task_id,
@@ -428,19 +436,14 @@ async def create_daily_forecast(
 
 
 @router.post("/tasks/templates/weekly-report", response_model=TaskResponse)
-async def create_weekly_report(
-    session_id: str,
-    subjects: list[dict],
-    day_of_week: int = 0,
-    hour: int = 8,
-):
+async def create_weekly_report(request: WeeklyReportRequest):
     """Create a weekly report task from template"""
     task = create_weekly_report_task(
         task_scheduler,
-        subjects,
-        session_id,
-        day_of_week,
-        hour,
+        request.subjects,
+        request.session_id,
+        request.day_of_week,
+        request.hour,
     )
     return TaskResponse(
         task_id=task.task_id,

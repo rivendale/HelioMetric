@@ -318,7 +318,6 @@ def error_response(
         "meta": add_camel_case_aliases({
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "status_code": status_code,
-            "statusCode": status_code,
         })
     }
 

@@ -7,12 +7,15 @@ All response models include both snake_case and camelCase field aliases.
 
 import os
 import math
+import logging
 from typing import Optional, Literal
 import httpx
 from pydantic import BaseModel, Field, ConfigDict
 from pydantic.alias_generators import to_camel
 
 from services.redis_cache import get_cached, set_cached, CacheKeys, CacheTTL
+
+logger = logging.getLogger(__name__)
 
 
 class DualCaseModel(BaseModel):
@@ -198,7 +201,7 @@ async def geocode_address(address: str) -> GeocodeResult:
         )
 
     except Exception as e:
-        print(f"Geocoding error: {e}")
+        logger.warning(f"Geocoding error: {e}")
         return GeocodeResult(
             success=False,
             error=str(e)
@@ -247,7 +250,7 @@ async def get_timezone(lat: float, lng: float, timestamp: Optional[int] = None) 
         )
 
     except Exception as e:
-        print(f"Timezone lookup error: {e}")
+        logger.warning(f"Timezone lookup error: {e}")
         return TimezoneResult(
             success=False,
             error=str(e)

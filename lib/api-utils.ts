@@ -21,7 +21,7 @@ export interface APIMeta {
   cached?: boolean;
   source?: string;
   statusCode?: number;
-  // camelCase aliases
+  // snake_case alias
   status_code?: number;
 }
 
@@ -69,9 +69,12 @@ export function toCamelCase(str: string): string {
  * @example
  * toSnakeCase('helloWorld') // 'hello_world'
  * toSnakeCase('kpIndex') // 'kp_index'
+ * toSnakeCase('StatusCode') // 'status_code'
  */
 export function toSnakeCase(str: string): string {
-  return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+  return str.replace(/[A-Z]/g, (letter, index) =>
+    (index > 0 ? '_' : '') + letter.toLowerCase()
+  );
 }
 
 /**

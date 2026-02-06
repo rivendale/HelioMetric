@@ -3,7 +3,8 @@ NOAA Space Weather API Router
 Provides NOAA K-Index data with standardized API responses
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 from services.noaa import (
     fetch_kindex,
     get_kindex_description,
@@ -39,10 +40,13 @@ async def get_noaa_data():
         data = await fetch_kindex()
 
         if not data:
-            return error_response(
-                code=ErrorCodes.EXTERNAL_API_ERROR,
-                message="Unable to fetch NOAA data",
-                status_code=503
+            return JSONResponse(
+                status_code=503,
+                content=error_response(
+                    code=ErrorCodes.EXTERNAL_API_ERROR,
+                    message="Unable to fetch NOAA data",
+                    status_code=503
+                )
             )
 
         # Add description and color for the latest reading
@@ -61,11 +65,14 @@ async def get_noaa_data():
         )
 
     except Exception as e:
-        return error_response(
-            code=ErrorCodes.INTERNAL_ERROR,
-            message="Failed to process NOAA data",
+        return JSONResponse(
             status_code=500,
-            details={"error": str(e)}
+            content=error_response(
+                code=ErrorCodes.INTERNAL_ERROR,
+                message="Failed to process NOAA data",
+                status_code=500,
+                details={"error": str(e)}
+            )
         )
 
 
@@ -82,11 +89,14 @@ async def get_kp_description(kp_value: float):
     """
     # Validate input range
     if kp_value < 0 or kp_value > 9:
-        return error_response(
-            code=ErrorCodes.VALIDATION_ERROR,
-            message="K-Index value must be between 0 and 9",
+        return JSONResponse(
             status_code=400,
-            field="kp_value"
+            content=error_response(
+                code=ErrorCodes.VALIDATION_ERROR,
+                message="K-Index value must be between 0 and 9",
+                status_code=400,
+                field="kp_value"
+            )
         )
 
     return success_response(

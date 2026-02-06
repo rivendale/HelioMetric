@@ -221,10 +221,12 @@ export class TimeDecoder {
 
   /**
    * Get element from year using the Heavenly Stems cycle
-   * Reference: Uses traditional 10-year element cycle
+   * Reference: Years ending in 4/5=Wood, 6/7=Fire, 8/9=Earth, 0/1=Metal, 2/3=Water
+   * The Heavenly Stems align with years ending in 4 (Jia/Wood Yang), so we use
+   * year 4 as the base reference point (e.g., 2024 = Wood Dragon).
    */
   private getElementFromYear(year: number): ElementType {
-    const offset = ((year - 1900) % 10 + 10) % 10; // Handle negative years
+    const offset = ((year - 4) % 10 + 10) % 10; // Handle negative years
     return ELEMENT_SEQUENCE[offset] as ElementType;
   }
 

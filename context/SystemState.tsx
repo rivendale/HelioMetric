@@ -83,6 +83,7 @@ type SystemAction =
   | { type: 'REORDER_NODES'; payload: FamilyNode[] }
   | { type: 'HYDRATE'; payload: SystemState }
   | { type: 'SET_TIME_VECTOR'; payload: Date }
+  | { type: 'SHIFT_TIME_VECTOR'; payload: number }
   | { type: 'TOGGLE_REALTIME_MODE'; payload: boolean }
   | { type: 'SYNC_REALTIME' };
 
@@ -91,7 +92,7 @@ const STORAGE_KEY = 'heliometric_system_state';
 
 // Generate unique ID
 function generateId(): string {
-  return `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `node_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 // Derive western zodiac from birth date string
@@ -238,6 +239,22 @@ function systemReducer(state: SystemState, action: SystemAction): SystemState {
           ...state.temporal,
           globalDate: action.payload,
           isRealTimeMode: false, // Disable real-time when manually setting
+          lastTemporalShift: Date.now(),
+        },
+        lastUpdated: Date.now(),
+      };
+    }
+
+    case 'SHIFT_TIME_VECTOR': {
+      const currentDate = state.temporal.globalDate;
+      const newDate = new Date(currentDate);
+      newDate.setDate(newDate.getDate() + action.payload);
+      return {
+        ...state,
+        temporal: {
+          ...state.temporal,
+          globalDate: newDate,
+          isRealTimeMode: false,
           lastTemporalShift: Date.now(),
         },
         lastUpdated: Date.now(),

@@ -240,6 +240,17 @@ export function calculateFamilyResonance(
   // Get current environmental state
   const environmentalVector = getEnvironmentalVector(currentDate);
 
+  // Guard against empty family array to prevent division by zero
+  if (family.length === 0) {
+    return {
+      totalResonance: 0,
+      totalDamping: 0,
+      coherenceField: 0,
+      individualPatterns: [],
+      environmentalVector,
+    };
+  }
+
   const patterns = family.map((member) => ({
     member,
     pattern: calculateInterference(member, helioState, currentDate),

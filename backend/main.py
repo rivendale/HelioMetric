@@ -13,7 +13,7 @@ import os
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -64,14 +64,15 @@ if PRODUCTION_ORIGIN:
     CORS_ORIGINS.append(PRODUCTION_ORIGIN)
 
 # Ralph Agent URL for CORS
-RALPH_URL = os.getenv("RALPH_MONITOR_URL", "https://ralph-agent.onrender.com")
+RALPH_URL = os.getenv("RALPH_MONITOR_URL")
 if RALPH_URL:
     CORS_ORIGINS.append(RALPH_URL)
 
-# In production without explicit origins, use wildcard (for initial deployment)
-# NOTE: For better security, configure PRODUCTION_ORIGIN environment variable
+# In production without explicit origins, log a warning
+# NOTE: Configure PRODUCTION_ORIGIN environment variable for proper CORS in production
 if IS_PRODUCTION and not PRODUCTION_ORIGIN:
-    CORS_ORIGINS = ["*"]
+    logger.warning("PRODUCTION_ORIGIN not configured - CORS will only allow localhost origins. "
+                    "Set PRODUCTION_ORIGIN env var for production deployments.")
 
 
 # ============================================================================
@@ -420,8 +421,21 @@ async def serve_spa(request: Request, full_path: str):
             )
         )
 
-    # Check if it's a static file that exists
-    file_path = FRONTEND_DIR / full_path
+    # Check if it's a static file that exists (with path traversal protection)
+    try:
+        file_path = (FRONTEND_DIR / full_path).resolve()
+        # Ensure the resolved path is still within FRONTEND_DIR
+        file_path.relative_to(FRONTEND_DIR.resolve())
+    except (ValueError, OSError):
+        # Path traversal attempt or invalid path
+        return JSONResponse(
+            status_code=404,
+            content=error_response(
+                code=ErrorCodes.NOT_FOUND,
+                message="Resource not found",
+                status_code=404
+            )
+        )
     if file_path.exists() and file_path.is_file():
         return FileResponse(file_path)
 
