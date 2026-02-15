@@ -7,7 +7,7 @@ This ensures API compatibility with different client conventions.
 
 import re
 from typing import Any, Dict, Generic, List, Optional, TypeVar, Union
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
@@ -255,7 +255,7 @@ def success_response(
         Standardized response dictionary
     """
     meta = {
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         "cached": cached,
     }
     if source:
@@ -316,7 +316,7 @@ def error_response(
         "success": False,
         "error": error_data,
         "meta": add_camel_case_aliases({
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
             "status_code": status_code,
         })
     }

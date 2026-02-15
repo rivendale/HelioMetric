@@ -17,7 +17,7 @@ import { getOrCompute, CacheKeys, CacheTTL } from './redis';
 export interface KIndexReading {
   timeTag: string; // ISO 8601 timestamp
   kpIndex: number; // Planetary K-Index (0-9)
-  observedTime: Date;
+  observedTime: string; // ISO 8601 string (safe for JSON serialization / Redis roundtrip)
 }
 
 export interface NOAASpaceWeatherData {
@@ -80,10 +80,10 @@ async function fetchKIndexFromAPI(): Promise<NOAASpaceWeatherData> {
       .map((row: [string, number, string?]) => ({
         timeTag: row[0],
         kpIndex: parseFloat(String(row[1])),
-        observedTime: new Date(row[0]),
+        observedTime: new Date(row[0]).toISOString(),
       }))
-      .sort((a: KIndexReading, b: KIndexReading) => 
-        b.observedTime.getTime() - a.observedTime.getTime()
+      .sort((a: KIndexReading, b: KIndexReading) =>
+        new Date(b.observedTime).getTime() - new Date(a.observedTime).getTime()
       );
 
     if (readings.length === 0) {
@@ -130,20 +130,20 @@ function getStormStatus(kp: number): 'quiet' | 'unsettled' | 'storm' {
 function getMockKIndexData(): NOAASpaceWeatherData {
   const now = new Date();
   const mockReadings: KIndexReading[] = [];
-  
-  // Generate 24 mock readings (past 8 hours, 3-hour intervals)
+
+  // Generate 24 deterministic mock readings (past 8 hours, 15-minute intervals)
   for (let i = 0; i < 24; i++) {
     const timeOffset = (23 - i) * 15 * 60 * 1000; // 15 minutes apart
     const timestamp = new Date(now.getTime() - timeOffset);
-    
-    // Simulate varying K-Index with some randomness
+
+    // Deterministic varying K-Index using sine wave (no randomness)
     const baseKp = 3 + Math.sin(i / 4) * 2;
-    const kpIndex = Math.max(0, Math.min(9, baseKp + (Math.random() - 0.5)));
-    
+    const kpIndex = Math.max(0, Math.min(9, baseKp));
+
     mockReadings.push({
       timeTag: timestamp.toISOString(),
       kpIndex: Math.round(kpIndex * 10) / 10,
-      observedTime: timestamp,
+      observedTime: timestamp.toISOString(),
     });
   }
   

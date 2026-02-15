@@ -65,13 +65,14 @@ async def get_noaa_data():
         )
 
     except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"NOAA data error: {e}", exc_info=True)
         return JSONResponse(
             status_code=500,
             content=error_response(
                 code=ErrorCodes.INTERNAL_ERROR,
                 message="Failed to process NOAA data",
                 status_code=500,
-                details={"error": str(e)}
             )
         )
 

@@ -14,50 +14,27 @@ All response models include both snake_case and camelCase field aliases.
 """
 
 import math
-import random
+
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Literal, Optional
 import httpx
-from pydantic import BaseModel, Field, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic import Field
 
 from services.redis_cache import get_or_compute, CacheKeys, CacheTTL
+from utils.responses import CamelCaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class DualCaseModel(BaseModel):
-    """Base model providing both snake_case and camelCase field names"""
-    model_config = ConfigDict(
-        populate_by_name=True,
-        alias_generator=to_camel,
-    )
-
-    def model_dump_dual(self, **kwargs) -> dict:
-        """Dump model with both snake_case and camelCase fields"""
-        snake_dict = self.model_dump(by_alias=False, **kwargs)
-        result = {}
-        for key, value in snake_dict.items():
-            result[key] = value
-            # Add camelCase alias
-            camel_key = ''.join(
-                word.capitalize() if i > 0 else word
-                for i, word in enumerate(key.split('_'))
-            )
-            if camel_key != key:
-                result[camel_key] = value
-        return result
-
-
-class KIndexReading(DualCaseModel):
+class KIndexReading(CamelCaseModel):
     """Single K-Index reading with dual-case field names"""
     time_tag: str = Field(description="Timestamp from NOAA")
     kp_index: float = Field(description="K-Index value (0-9)")
     observed_time: datetime = Field(description="Parsed observation time")
 
 
-class NOAASpaceWeatherData(DualCaseModel):
+class NOAASpaceWeatherData(CamelCaseModel):
     """Complete NOAA space weather response with dual-case field names"""
     latest: KIndexReading = Field(description="Most recent K-Index reading")
     readings: List[KIndexReading] = Field(description="Array of recent readings")
@@ -110,16 +87,16 @@ def get_kindex_color(kp: float) -> str:
 
 def get_mock_kindex_data() -> dict:
     """Generate mock data for development and error fallback"""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     mock_readings = []
 
     for i in range(24):
         time_offset_ms = (23 - i) * 15 * 60 * 1000
         timestamp = datetime.fromtimestamp(now.timestamp() - time_offset_ms / 1000)
 
-        # Simulate varying K-Index with some randomness
+        # Deterministic varying K-Index using sine wave (no randomness)
         base_kp = 3 + math.sin(i / 4) * 2
-        kp_index = max(0, min(9, base_kp + (random.random() - 0.5)))
+        kp_index = max(0, min(9, base_kp))
 
         mock_readings.append({
             "time_tag": timestamp.isoformat(),

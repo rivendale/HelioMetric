@@ -10,7 +10,7 @@ import logging
 import traceback
 import asyncio
 from typing import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -60,13 +60,13 @@ class RalphErrorMiddleware(BaseHTTPMiddleware):
         if any(request.url.path.startswith(path) for path in self.exclude_paths):
             return await call_next(request)
 
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
 
         try:
             response = await call_next(request)
 
             # Calculate request duration
-            duration_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             # Report 5xx errors
             if self.report_5xx and response.status_code >= 500:
@@ -80,7 +80,7 @@ class RalphErrorMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             # Calculate duration even for exceptions
-            duration_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+            duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             # Report the exception
             await self._report_exception(request, e, duration_ms)
@@ -208,7 +208,7 @@ def create_ralph_exception_handler():
                     "message": "Internal server error"
                 },
                 "meta": {
-                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                    "timestamp": datetime.now(timezone.utc).isoformat() + "Z"
                 }
             }
         )

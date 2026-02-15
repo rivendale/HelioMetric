@@ -6,10 +6,16 @@ Endpoints for the research agent and task scheduler:
 - Skill execution
 - Session management
 - Scheduled task management
+
+All endpoints require API key authentication via X-Research-Key header.
+Set RESEARCH_API_KEY environment variable to enable access.
 """
 
+import os
+import re
 from typing import Optional
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Security
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
 from services.research_agent import (
@@ -25,8 +31,62 @@ from services.task_scheduler import (
     create_solar_term_alert_task,
 )
 
+# ============================================================================
+# Authentication
+# ============================================================================
 
-router = APIRouter(prefix="/api/research", tags=["research"])
+RESEARCH_API_KEY = os.getenv("RESEARCH_API_KEY", "")
+
+api_key_header = APIKeyHeader(name="X-Research-Key", auto_error=False)
+
+
+async def verify_research_api_key(api_key: Optional[str] = Security(api_key_header)):
+    """Verify the research API key. All research endpoints require authentication."""
+    if not RESEARCH_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Research API not configured. Set RESEARCH_API_KEY environment variable."
+        )
+    if not api_key or api_key != RESEARCH_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+    return api_key
+
+
+# Minimum interval for cron schedules (5 minutes)
+MIN_CRON_INTERVAL_SECONDS = 300
+
+
+def validate_cron_expression(cron_expr: str) -> None:
+    """Validate a cron expression and enforce minimum interval."""
+    try:
+        from croniter import croniter
+        if not croniter.is_valid(cron_expr):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid cron expression: {cron_expr}"
+            )
+        # Check minimum interval by computing two consecutive runs
+        from datetime import datetime, timezone
+        cron = croniter(cron_expr, datetime.now(timezone.utc))
+        first = cron.get_next(datetime)
+        second = cron.get_next(datetime)
+        interval = (second - first).total_seconds()
+        if interval < MIN_CRON_INTERVAL_SECONDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cron schedule too frequent. Minimum interval is {MIN_CRON_INTERVAL_SECONDS} seconds, got {int(interval)}s."
+            )
+    except ImportError:
+        # croniter not available - do basic validation
+        parts = cron_expr.strip().split()
+        if len(parts) not in (5, 6):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid cron expression: expected 5 or 6 fields, got {len(parts)}"
+            )
+
+
+router = APIRouter(prefix="/api/research", tags=["research"], dependencies=[Depends(verify_research_api_key)])
 
 
 # ============================================================================
@@ -282,6 +342,25 @@ async def create_task(request: CreateTaskRequest):
             status_code=400,
             detail=f"Invalid skill type: {request.skill_type}"
         )
+
+    # Validate cron expression if schedule type is cron
+    if schedule_type == ScheduleType.CRON:
+        validate_cron_expression(request.schedule_value)
+
+    # Validate interval schedule
+    if schedule_type == ScheduleType.INTERVAL:
+        try:
+            interval_seconds = int(request.schedule_value)
+            if interval_seconds < MIN_CRON_INTERVAL_SECONDS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Interval too short. Minimum is {MIN_CRON_INTERVAL_SECONDS} seconds."
+                )
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Interval schedule_value must be a valid integer (seconds)"
+            )
 
     task = task_scheduler.create_task(
         task_id=request.task_id,

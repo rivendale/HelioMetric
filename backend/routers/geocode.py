@@ -130,13 +130,14 @@ async def geocode(request: GeocodeRequest):
             )
         )
     except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Geocoding error: {e}", exc_info=True)
         return JSONResponse(
             status_code=500,
             content=error_response(
                 code=ErrorCodes.INTERNAL_ERROR,
                 message="Geocoding request failed",
                 status_code=500,
-                details={"error": str(e)}
             )
         )
 

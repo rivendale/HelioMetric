@@ -9,7 +9,7 @@ All requests are authenticated via HMAC signature verification.
 import json
 import logging
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 
 from fastapi import APIRouter, Request, Header, HTTPException
@@ -59,7 +59,7 @@ class RalphLogHandler(logging.Handler):
         global _log_buffer
 
         log_entry = {
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -109,7 +109,7 @@ def fetch_recent_logs(
     level_order = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
     min_level_value = level_order.get(min_level.upper(), 40)
 
-    cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
     cutoff_str = cutoff_time.isoformat() + "Z"
 
     filtered_logs = [
@@ -136,7 +136,7 @@ def analyze_logs(
     Returns:
         Analysis summary
     """
-    cutoff_time = datetime.utcnow() - timedelta(hours=hours)
+    cutoff_time = datetime.now(timezone.utc) - timedelta(hours=hours)
     cutoff_str = cutoff_time.isoformat() + "Z"
 
     recent_logs = [
@@ -311,7 +311,7 @@ def generate_test_data(data_type: str = "sample", count: int = 5) -> List[Dict[s
             {
                 "id": i + 1,
                 "type": data_type,
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
                 "value": round(random.random() * 100, 2)
             }
             for i in range(count)
@@ -322,7 +322,7 @@ def get_system_metrics() -> Dict[str, Any]:
     """Get current system metrics."""
     metrics = {
         "uptime_seconds": get_uptime_seconds(),
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": datetime.now(timezone.utc).isoformat() + "Z"
     }
 
     # Try to get CPU/memory metrics
@@ -390,7 +390,7 @@ async def ralph_callback(
                     "service": APP_NAME,
                     "version": APP_VERSION,
                     "uptime_seconds": get_uptime_seconds(),
-                    "timestamp": datetime.utcnow().isoformat() + "Z"
+                    "timestamp": datetime.now(timezone.utc).isoformat() + "Z"
                 }
             }
 
@@ -541,7 +541,7 @@ async def ralph_callback(
         return {
             "request_id": request_id,
             "status": "error",
-            "error": str(e)
+            "error": "Internal processing error"
         }
 
 

@@ -42,29 +42,24 @@ export interface ZodiacSign {
 // NOAA Space Weather Types
 // ============================================================================
 
+/**
+ * Canonical types use camelCase internally.
+ * API responses may include snake_case aliases — use `normalizeApiResponse()`
+ * from api-utils.ts to normalize incoming data to these canonical forms.
+ */
+
 export interface KIndexReading {
-  // snake_case
-  time_tag?: string;
-  kp_index?: number;
-  observed_time?: string | Date;
-  // camelCase aliases
-  timeTag?: string;
-  kpIndex?: number;
-  observedTime?: string | Date;
+  timeTag: string;
+  kpIndex: number;
+  observedTime: string;
 }
 
 export interface NOAASpaceWeatherData {
   latest: KIndexReading;
   readings: KIndexReading[];
-  // snake_case
-  average_kp?: number;
-  max_kp?: number;
-  is_simulated?: boolean;
-  // camelCase aliases
-  averageKp?: number;
-  maxKp?: number;
+  averageKp: number;
+  maxKp: number;
   isSimulated?: boolean;
-  // Shared
   status: 'quiet' | 'unsettled' | 'storm';
   description?: string;
   color?: string;
@@ -87,28 +82,19 @@ export interface GeomagneticInfo {
 export interface StormImpactInfo {
   factor: number;
   description: string;
-  // snake_case
-  aurora_likelihood?: string;
-  // camelCase alias
-  auroraLikelihood?: string;
+  auroraLikelihood: string;
 }
 
 export interface TimezoneInfo {
   id: string;
   name: string;
-  // snake_case
-  utc_offset?: number;
-  // camelCase alias
-  utcOffset?: number;
+  utcOffset: number;
 }
 
 export interface LocationAnalysis {
   coordinates: Coordinates;
   geomagnetic: GeomagneticInfo;
-  // snake_case
-  storm_impact?: StormImpactInfo;
-  // camelCase alias
-  stormImpact?: StormImpactInfo;
+  stormImpact: StormImpactInfo;
   timezone?: TimezoneInfo;
 }
 
@@ -119,13 +105,8 @@ export interface LocationAnalysis {
 export interface GeoLocation {
   lat: number;
   lng: number;
-  // snake_case
-  formatted_address?: string;
-  place_id?: string;
-  magnetic_declination?: number;
-  // camelCase aliases
-  formattedAddress?: string;
-  placeId?: string;
+  formattedAddress: string;
+  placeId: string;
   magneticDeclination?: number;
   timezone?: string;
 }
@@ -150,9 +131,6 @@ export interface APIMeta {
   timestamp: string;
   cached?: boolean;
   source?: string;
-  // snake_case
-  status_code?: number;
-  // camelCase alias
   statusCode?: number;
 }
 
@@ -179,16 +157,10 @@ export interface FamilyNode {
 }
 
 export interface InterferencePattern {
-  // snake_case
-  resonance_index?: number;
-  damping_coefficient?: number;
-  phase_coherence?: number;
-  harmonic_order?: number;
-  // camelCase aliases
-  resonanceIndex?: number;
-  dampingCoefficient?: number;
-  phaseCoherence?: number;
-  harmonicOrder?: number;
+  resonanceIndex: number;
+  dampingCoefficient: number;
+  phaseCoherence: number;
+  harmonicOrder: number;
 }
 
 // ============================================================================
@@ -202,30 +174,17 @@ export interface SolarTerm {
 }
 
 export interface TemporalState {
-  // snake_case
-  year_archetype?: ZodiacArchetype;
-  year_element?: ElementType;
-  energetic_year?: number;
-  solar_longitude?: number;
-  solar_longitude_formatted?: string;
-  current_solar_term?: SolarTerm;
-  next_solar_term?: SolarTerm;
-  progress_in_term?: number;
-  is_retrograde?: boolean;
-  utc_timestamp?: string;
-  day_of_energetic_year?: number;
-  // camelCase aliases
-  yearArchetype?: ZodiacArchetype;
-  yearElement?: ElementType;
-  energeticYear?: number;
-  solarLongitude?: number;
-  solarLongitudeFormatted?: string;
-  currentSolarTerm?: SolarTerm;
-  nextSolarTerm?: SolarTerm;
-  progressInTerm?: number;
+  yearArchetype: ZodiacArchetype;
+  yearElement: ElementType;
+  energeticYear: number;
+  solarLongitude: number;
+  solarLongitudeFormatted: string;
+  currentSolarTerm: SolarTerm;
+  nextSolarTerm: SolarTerm;
+  progressInTerm: number;
   isRetrograde?: boolean;
-  utcTimestamp?: string;
-  dayOfEnergeticYear?: number;
+  utcTimestamp: string;
+  dayOfEnergeticYear: number;
 }
 
 // ============================================================================
