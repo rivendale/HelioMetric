@@ -157,18 +157,6 @@ export function calculateInterference(
 }
 
 /**
- * Legacy function for backwards compatibility
- * @deprecated Use calculateInterference with currentDate parameter instead
- */
-export function calculateFireHorseInterference(
-  familyMember: FamilyMember,
-  helioState: HeliosphericState
-): InterferencePattern {
-  // Default to current date for backwards compatibility
-  return calculateInterference(familyMember, helioState, new Date());
-}
-
-/**
  * Calculate elemental coupling strength based on Wu Xing (Five Elements) theory
  */
 function calculateElementalCoupling(element1: ElementType, element2: ElementType): number {

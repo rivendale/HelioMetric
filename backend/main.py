@@ -10,7 +10,9 @@ Features:
 """
 
 import os
+import time
 import logging
+from collections import defaultdict
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
@@ -49,19 +51,26 @@ APP_VERSION = "0.4.0"
 IS_PRODUCTION = os.getenv("NODE_ENV") == "production"
 
 # Allowed origins for CORS
-CORS_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:8000",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:8000",
-]
+CORS_ORIGINS: list[str] = []
 
-# Add production origins if configured
+if not IS_PRODUCTION:
+    # Only allow HTTP localhost origins in development
+    CORS_ORIGINS = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
+    ]
+
+# Add production origins if configured (must be HTTPS in production)
 PRODUCTION_ORIGIN = os.getenv("PRODUCTION_ORIGIN")
 if PRODUCTION_ORIGIN:
-    CORS_ORIGINS.append(PRODUCTION_ORIGIN)
+    if IS_PRODUCTION and not PRODUCTION_ORIGIN.startswith("https://"):
+        logger.warning("PRODUCTION_ORIGIN should use HTTPS in production. Ignoring insecure origin.")
+    else:
+        CORS_ORIGINS.append(PRODUCTION_ORIGIN)
 
 # Ralph Agent URL for CORS
 RALPH_URL = os.getenv("RALPH_MONITOR_URL")
@@ -90,6 +99,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self' https://services.swpc.noaa.gov https://maps.googleapis.com; "
+            "font-src 'self' data:; "
+            "frame-ancestors 'none'"
+        )
 
         # Cache control for API responses
         if request.url.path.startswith("/api"):
@@ -98,6 +116,46 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 response.headers["Cache-Control"] = "no-store, max-age=0"
 
         return response
+
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Simple in-memory rate limiter per client IP."""
+
+    def __init__(self, app, requests_per_minute: int = 60, burst: int = 10):
+        super().__init__(app)
+        self.requests_per_minute = requests_per_minute
+        self.burst = burst
+        self._requests: dict[str, list[float]] = defaultdict(list)
+
+    async def dispatch(self, request: Request, call_next):
+        # Skip rate limiting for health checks and static files
+        if not request.url.path.startswith("/api"):
+            return await call_next(request)
+
+        client_ip = request.client.host if request.client else "unknown"
+        now = time.monotonic()
+        window = 60.0  # 1 minute window
+
+        # Clean old entries
+        self._requests[client_ip] = [
+            t for t in self._requests[client_ip] if now - t < window
+        ]
+
+        if len(self._requests[client_ip]) >= self.requests_per_minute:
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "success": False,
+                    "error": {
+                        "code": "RATE_LIMITED",
+                        "message": "Too many requests. Please try again later.",
+                    },
+                },
+                headers={"Retry-After": "60"},
+            )
+
+        self._requests[client_ip].append(now)
+        return await call_next(request)
 
 
 # ============================================================================
@@ -205,6 +263,9 @@ app.add_middleware(
     slow_request_threshold_ms=5000,
     exclude_paths=["/health", "/api/ralph-callback"]
 )
+
+# Add rate limiting middleware
+app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
 
 # Add security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
@@ -324,8 +385,6 @@ async def api_info():
             ],
             "monitoring": {
                 "ralph_configured": ralph_monitor.is_configured(),
-                "ralph_url": ralph_monitor.RALPH_URL,
-                "project_id": ralph_monitor.PROJECT_ID
             },
             "documentation": {
                 "swagger": "/api/docs",

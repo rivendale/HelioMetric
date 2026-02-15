@@ -14,7 +14,7 @@ forecast optimal periods, and conduct open-ended research discussions.
 import json
 import os
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 from dataclasses import dataclass, field, asdict
 from enum import Enum
@@ -28,6 +28,9 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 RESEARCH_MEMORY_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "research_memory")
 MAX_CONTEXT_MESSAGES = 20
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
+MAX_SESSION_COUNT = 100        # Maximum number of stored sessions
+MAX_MESSAGE_LENGTH = 10000     # Maximum characters per message
+MAX_SESSION_FILE_SIZE = 512000 # Maximum session file size in bytes (500KB)
 
 
 # ============================================================================
@@ -50,7 +53,7 @@ class ResearchMessage:
     """A single message in a research conversation"""
     role: str  # "user" or "assistant"
     content: str
-    timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     skill_used: Optional[str] = None
     context_summary: Optional[str] = None
 
@@ -308,15 +311,36 @@ class MemoryManager:
             return None
 
     def save_session(self, session: ResearchSession) -> None:
-        """Save a session to disk"""
+        """Save a session to disk with size limits."""
         path = self._get_session_path(session.session_id)
-        session.updated_at = datetime.utcnow().isoformat()
+        session.updated_at = datetime.now(timezone.utc).isoformat()
+        data = json.dumps(session.to_dict(), indent=2)
+        if len(data) > MAX_SESSION_FILE_SIZE:
+            # Trim oldest messages to fit under limit
+            while len(data) > MAX_SESSION_FILE_SIZE and len(session.messages) > 2:
+                session.messages.pop(0)
+                data = json.dumps(session.to_dict(), indent=2)
         with open(path, "w") as f:
-            json.dump(session.to_dict(), f, indent=2)
+            f.write(data)
+
+    def _enforce_session_limit(self) -> None:
+        """Remove oldest sessions if over the max count."""
+        sessions = self.list_sessions()
+        if len(sessions) > MAX_SESSION_COUNT:
+            # Remove oldest sessions beyond limit
+            to_remove = sessions[MAX_SESSION_COUNT:]
+            for s in to_remove:
+                safe_id = hashlib.sha256(s["session_id"].encode()).hexdigest()[:16]
+                path = os.path.join(self.memory_dir, f"session_{safe_id}.json")
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
 
     def create_session(self, session_id: str, initial_context: Optional[dict] = None) -> ResearchSession:
-        """Create a new session"""
-        now = datetime.utcnow().isoformat()
+        """Create a new session (enforces max session count)."""
+        self._enforce_session_limit()
+        now = datetime.now(timezone.utc).isoformat()
         session = ResearchSession(
             session_id=session_id,
             created_at=now,
@@ -464,10 +488,13 @@ class ResearchAgent:
         # Execute the skill
         result = await handler(session, user_message, context or {})
 
+        # Truncate message if too long
+        truncated_message = user_message[:MAX_MESSAGE_LENGTH] if len(user_message) > MAX_MESSAGE_LENGTH else user_message
+
         # Save the interaction to memory
         session.messages.append(ResearchMessage(
             role="user",
-            content=user_message,
+            content=truncated_message,
             skill_used=skill_type.value,
             context_summary=self._build_context_prompt(context)[:500] if context else None,
         ))

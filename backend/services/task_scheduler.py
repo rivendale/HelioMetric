@@ -17,7 +17,7 @@ Example tasks:
 import asyncio
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 from dataclasses import dataclass, field, asdict
 from enum import Enum
@@ -88,8 +88,8 @@ class ScheduledTask:
     notify_callback: Optional[str] = None  # URL to notify on completion
 
     # Metadata
-    created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     timezone: str = "UTC"
 
     def to_dict(self) -> dict:
@@ -117,8 +117,8 @@ class ScheduledTask:
             run_count=data.get("run_count", 0),
             session_id=data.get("session_id"),
             notify_callback=data.get("notify_callback"),
-            created_at=data.get("created_at", datetime.utcnow().isoformat()),
-            updated_at=data.get("updated_at", datetime.utcnow().isoformat()),
+            created_at=data.get("created_at", datetime.now(timezone.utc).isoformat()),
+            updated_at=data.get("updated_at", datetime.now(timezone.utc).isoformat()),
             timezone=data.get("timezone", "UTC"),
         )
 
@@ -159,7 +159,7 @@ class TaskStorage:
 
     def save_task(self, task: ScheduledTask) -> None:
         """Save a task to disk"""
-        task.updated_at = datetime.utcnow().isoformat()
+        task.updated_at = datetime.now(timezone.utc).isoformat()
         path = self._get_task_path(task.task_id)
         with open(path, "w") as f:
             json.dump(task.to_dict(), f, indent=2)
@@ -235,7 +235,7 @@ class ScheduleCalculator:
     @staticmethod
     def calculate_next_run(task: ScheduledTask) -> Optional[datetime]:
         """Calculate the next run time for a task"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         if task.schedule_type == ScheduleType.CRON:
             if not HAS_CRONITER:
@@ -282,7 +282,7 @@ class ScheduleCalculator:
 
         try:
             next_run = datetime.fromisoformat(task.next_run)
-            return datetime.utcnow() >= next_run
+            return datetime.now(timezone.utc) >= next_run
         except ValueError:
             return False
 
@@ -300,10 +300,10 @@ class TaskExecutor:
     async def execute_task(self, task: ScheduledTask) -> TaskResult:
         """Execute a single task"""
         execution_id = hashlib.sha256(
-            f"{task.task_id}_{datetime.utcnow().isoformat()}".encode()
+            f"{task.task_id}_{datetime.now(timezone.utc).isoformat()}".encode()
         ).hexdigest()[:12]
 
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
 
         # Update task status
         task.status = TaskStatus.RUNNING
@@ -320,7 +320,7 @@ class TaskExecutor:
                 context=task.context,
             )
 
-            completed_at = datetime.utcnow()
+            completed_at = datetime.now(timezone.utc)
             duration_ms = int((completed_at - started_at).total_seconds() * 1000)
 
             result = TaskResult(
@@ -354,7 +354,7 @@ class TaskExecutor:
             return result
 
         except Exception as e:
-            completed_at = datetime.utcnow()
+            completed_at = datetime.now(timezone.utc)
             duration_ms = int((completed_at - started_at).total_seconds() * 1000)
 
             result = TaskResult(
@@ -485,13 +485,25 @@ class TaskScheduler:
 
             await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
+    async def start_async(self):
+        """Start the scheduler from an async context (preferred)."""
+        if self.running:
+            return
+        self.running = True
+        self._task = asyncio.create_task(self._scheduler_loop())
+
     def start(self):
-        """Start the scheduler"""
+        """Start the scheduler. Works from both sync and async contexts."""
         if self.running:
             return
 
         self.running = True
-        self._task = asyncio.create_task(self._scheduler_loop())
+        try:
+            loop = asyncio.get_running_loop()
+            self._task = loop.create_task(self._scheduler_loop())
+        except RuntimeError:
+            # No running event loop - defer to when one is available
+            pass
 
     def stop(self):
         """Stop the scheduler"""

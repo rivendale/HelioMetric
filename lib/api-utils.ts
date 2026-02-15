@@ -72,9 +72,10 @@ export function toCamelCase(str: string): string {
  * toSnakeCase('StatusCode') // 'status_code'
  */
 export function toSnakeCase(str: string): string {
-  return str.replace(/[A-Z]/g, (letter, index) =>
-    (index > 0 ? '_' : '') + letter.toLowerCase()
-  );
+  return str
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
+    .replace(/([a-z\d])([A-Z])/g, '$1_$2')
+    .toLowerCase();
 }
 
 /**
@@ -393,4 +394,40 @@ export function isErrorResponse<T>(
   response: APIResponse<T>
 ): response is APIResponse<T> & { success: false; error: APIError } {
   return response.success === false && response.error !== undefined;
+}
+
+// ============================================================================
+// API Response Normalization
+// ============================================================================
+
+/**
+ * Normalize an API response from dual-case (snake_case + camelCase) to
+ * canonical camelCase. Use this at the API boundary when consuming
+ * backend responses to ensure consistent internal types.
+ *
+ * @example
+ * const data = await fetch('/api/noaa').then(r => r.json());
+ * const normalized = normalizeApiResponse(data);
+ * // normalized.averageKp is guaranteed to exist (not average_kp)
+ */
+export function normalizeApiResponse<T extends Record<string, unknown>>(data: T): T {
+  if (data === null || typeof data !== 'object') return data;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    const camelKey = toCamelCase(key);
+    // Prefer camelCase version if both exist; otherwise normalize the key
+    if (!(camelKey in result)) {
+      result[camelKey] = typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? normalizeApiResponse(value as Record<string, unknown>)
+        : Array.isArray(value)
+          ? value.map(item =>
+              typeof item === 'object' && item !== null
+                ? normalizeApiResponse(item as Record<string, unknown>)
+                : item
+            )
+          : value;
+    }
+  }
+  return result as T;
 }

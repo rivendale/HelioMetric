@@ -104,8 +104,13 @@ export async function deleteCached(key: string): Promise<boolean> {
   }
 }
 
+// In-flight promise deduplication to prevent cache stampede
+const inFlight = new Map<string, Promise<unknown>>();
+
 /**
- * Get or compute pattern - fetches from cache or computes and stores
+ * Get or compute pattern - fetches from cache or computes and stores.
+ * Uses in-flight deduplication to prevent cache stampede (multiple
+ * concurrent requests all computing the same value simultaneously).
  */
 export async function getOrCompute<T>(
   key: string,
@@ -118,11 +123,24 @@ export async function getOrCompute<T>(
     return cached;
   }
 
-  // Compute fresh value
-  const value = await computeFn();
+  // Check if another call is already computing this key
+  const existing = inFlight.get(key);
+  if (existing) {
+    return existing as Promise<T>;
+  }
 
-  // Store in cache (fire and forget, catch errors to prevent unhandled rejections)
-  setCached(key, value, ttlSeconds).catch(() => {});
+  // Compute fresh value with deduplication
+  const promise = (async () => {
+    try {
+      const value = await computeFn();
+      // Store in cache (fire and forget)
+      setCached(key, value, ttlSeconds).catch(() => {});
+      return value;
+    } finally {
+      inFlight.delete(key);
+    }
+  })();
 
-  return value;
+  inFlight.set(key, promise);
+  return promise;
 }

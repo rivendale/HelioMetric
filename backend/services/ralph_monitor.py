@@ -25,7 +25,7 @@ import hmac
 import hashlib
 import logging
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 try:
     import httpx
@@ -60,14 +60,14 @@ _startup_time: Optional[datetime] = None
 def set_startup_time():
     """Set the startup timestamp for uptime calculations."""
     global _startup_time
-    _startup_time = datetime.utcnow()
+    _startup_time = datetime.now(timezone.utc)
 
 
 def get_uptime_seconds() -> int:
     """Get application uptime in seconds."""
     if _startup_time is None:
         return 0
-    return int((datetime.utcnow() - _startup_time).total_seconds())
+    return int((datetime.now(timezone.utc) - _startup_time).total_seconds())
 
 
 # ============================================================================
@@ -91,11 +91,11 @@ def verify_signature(body: bytes, signature: str) -> bool:
         signature: X-Ralph-Signature header value
 
     Returns:
-        True if signature is valid or no secret configured
+        True if signature is valid, False otherwise
     """
     if not SECRET:
-        logger.warning("RALPH_MONITOR_SECRET not configured - skipping signature verification")
-        return True
+        logger.warning("RALPH_MONITOR_SECRET not configured - rejecting request")
+        return False
     if not signature:
         logger.warning("No signature provided in request")
         return False
@@ -277,7 +277,7 @@ def send_event(
         "message": message,
         "metadata": {
             "app_version": APP_VERSION,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
             **(metadata or {})
         }
     }
@@ -303,7 +303,7 @@ async def send_event_async(
         "message": message,
         "metadata": {
             "app_version": APP_VERSION,
-            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
             **(metadata or {})
         }
     }

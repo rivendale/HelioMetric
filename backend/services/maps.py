@@ -10,23 +10,15 @@ import math
 import logging
 from typing import Optional, Literal
 import httpx
-from pydantic import BaseModel, Field, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic import Field
 
 from services.redis_cache import get_cached, set_cached, CacheKeys, CacheTTL
+from utils.responses import CamelCaseModel
 
 logger = logging.getLogger(__name__)
 
 
-class DualCaseModel(BaseModel):
-    """Base model providing both snake_case and camelCase field names"""
-    model_config = ConfigDict(
-        populate_by_name=True,
-        alias_generator=to_camel,
-    )
-
-
-class GeoLocation(DualCaseModel):
+class GeoLocation(CamelCaseModel):
     """Geocoded location data with dual-case field names"""
     lat: float = Field(description="Latitude")
     lng: float = Field(description="Longitude")
@@ -36,7 +28,7 @@ class GeoLocation(DualCaseModel):
     magnetic_declination: Optional[float] = Field(default=None, description="Magnetic declination in degrees")
 
 
-class GeocodeResult(DualCaseModel):
+class GeocodeResult(CamelCaseModel):
     """Geocoding result with dual-case field names"""
     success: bool = Field(description="Whether geocoding succeeded")
     location: Optional[GeoLocation] = Field(default=None, description="Location data if successful")
@@ -44,7 +36,7 @@ class GeocodeResult(DualCaseModel):
     cached: bool = Field(default=False, description="Whether result was from cache")
 
 
-class TimezoneResult(DualCaseModel):
+class TimezoneResult(CamelCaseModel):
     """Timezone lookup result with dual-case field names"""
     success: bool = Field(description="Whether lookup succeeded")
     timezone_id: Optional[str] = Field(default=None, description="Timezone ID (e.g., 'America/New_York')")
@@ -54,7 +46,7 @@ class TimezoneResult(DualCaseModel):
     error: Optional[str] = Field(default=None, description="Error message if failed")
 
 
-class StormImpact(DualCaseModel):
+class StormImpact(CamelCaseModel):
     """Storm impact analysis for a location with dual-case field names"""
     factor: float = Field(description="Storm impact multiplier (0.5-1.5)")
     description: str = Field(description="Human-readable impact description")
