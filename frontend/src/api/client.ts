@@ -72,7 +72,13 @@ export async function fetchNOAAData(): Promise<NOAASpaceWeatherData> {
   if (!response.ok) {
     throw new Error(`Failed to fetch NOAA data: ${response.statusText}`);
   }
-  return response.json();
+  const json = await response.json();
+  // API returns { success, data, meta } envelope — unwrap the data
+  const data = json.data ?? json;
+  if (!data.latest) {
+    throw new Error('Invalid NOAA response: missing latest reading');
+  }
+  return data;
 }
 
 /**
@@ -87,7 +93,8 @@ export async function analyzeLocation(lat: number, lng: number): Promise<Locatio
   if (!response.ok) {
     throw new Error(`Failed to analyze location: ${response.statusText}`);
   }
-  return response.json();
+  const json = await response.json();
+  return json.data ?? json;
 }
 
 /**
@@ -102,7 +109,8 @@ export async function geocodeAddress(address: string): Promise<GeocodeResponse> 
   if (!response.ok) {
     throw new Error(`Failed to geocode address: ${response.statusText}`);
   }
-  return response.json();
+  const json = await response.json();
+  return json.data ?? json;
 }
 
 /**

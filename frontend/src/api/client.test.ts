@@ -20,7 +20,28 @@ describe('API Client', () => {
   });
 
   describe('fetchNOAAData', () => {
-    it('should fetch and return NOAA data', async () => {
+    it('should fetch and return NOAA data from envelope', async () => {
+      const mockData = {
+        latest: { time_tag: '2024-01-01', kp_index: 3, observed_time: '2024-01-01T00:00:00Z' },
+        readings: [],
+        average_kp: 3,
+        max_kp: 4,
+        status: 'quiet',
+        is_simulated: false,
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: mockData }),
+      });
+
+      const result = await fetchNOAAData();
+
+      expect(mockFetch).toHaveBeenCalledWith('/api/noaa');
+      expect(result).toEqual(mockData);
+    });
+
+    it('should handle unwrapped response for backward compatibility', async () => {
       const mockData = {
         latest: { time_tag: '2024-01-01', kp_index: 3, observed_time: '2024-01-01T00:00:00Z' },
         readings: [],
@@ -37,7 +58,6 @@ describe('API Client', () => {
 
       const result = await fetchNOAAData();
 
-      expect(mockFetch).toHaveBeenCalledWith('/api/noaa');
       expect(result).toEqual(mockData);
     });
 
@@ -52,7 +72,7 @@ describe('API Client', () => {
   });
 
   describe('analyzeLocation', () => {
-    it('should POST location and return analysis', async () => {
+    it('should POST location and return analysis from envelope', async () => {
       const mockAnalysis = {
         coordinates: { lat: 40.7128, lng: -74.006 },
         geomagnetic: { latitude: 51.2, declination: -13.5 },
@@ -61,7 +81,7 @@ describe('API Client', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockAnalysis),
+        json: () => Promise.resolve({ success: true, data: mockAnalysis }),
       });
 
       const result = await analyzeLocation(40.7128, -74.006);
@@ -85,7 +105,7 @@ describe('API Client', () => {
   });
 
   describe('geocodeAddress', () => {
-    it('should POST address and return geocode result', async () => {
+    it('should POST address and return geocode result from envelope', async () => {
       const mockGeocode = {
         location: {
           lat: 40.7128,
@@ -98,7 +118,7 @@ describe('API Client', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockGeocode),
+        json: () => Promise.resolve({ success: true, data: mockGeocode }),
       });
 
       const result = await geocodeAddress('New York');

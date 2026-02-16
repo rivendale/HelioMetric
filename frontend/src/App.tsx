@@ -60,8 +60,8 @@ function AppContent() {
     );
   }
 
-  const kpIndex = noaaData?.latest.kp_index ?? 3;
-  const kpTimestamp = noaaData?.latest.observed_time ? new Date(noaaData.latest.observed_time) : new Date();
+  const kpIndex = noaaData?.latest?.kp_index ?? 3;
+  const kpTimestamp = noaaData?.latest?.observed_time ? new Date(noaaData.latest.observed_time) : new Date();
   const modeInfo = getModeInfo(uiState.mode);
 
   return (
