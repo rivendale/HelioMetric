@@ -26,7 +26,7 @@ import {
 
 interface DashboardClientProps {
   kIndex: number;
-  kIndexTimestamp: Date;
+  kIndexTimestamp: string;
 }
 
 type DashboardTab = 'people' | 'profiles' | 'compatibility' | 'explorer' | 'analysis' | 'location';
@@ -76,7 +76,7 @@ function DashboardContent({ kIndex, kIndexTimestamp }: DashboardClientProps) {
 
     return calculateFamilyResonance(
       familyMembers,
-      { kIndex, timestamp: kIndexTimestamp },
+      { kIndex, timestamp: new Date(kIndexTimestamp) },
       globalDate
     );
   }, [familyMembers, kIndex, kIndexTimestamp, globalDate]);

@@ -45,7 +45,7 @@ type SystemAction =
 const STORAGE_KEY = 'heliometric_system_state';
 
 function generateId(): string {
-  return `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `node_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 function createNode(data: Omit<FamilyNode, 'id' | 'zodiacSign'>): FamilyNode {

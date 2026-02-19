@@ -395,9 +395,11 @@ async def ralph_callback(
             }
 
         elif request_type == "log_fetch":
-            lines = payload.get("lines", 100)
-            level = payload.get("level", "ERROR")
-            since_hours = payload.get("since_hours", 24)
+            lines = max(1, min(int(payload.get("lines", 100)), 1000))
+            level = str(payload.get("level", "ERROR")).upper()
+            if level not in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+                level = "ERROR"
+            since_hours = max(1, min(int(payload.get("since_hours", 24)), 720))
 
             logs = fetch_recent_logs(lines=lines, min_level=level, hours=since_hours)
 
@@ -413,7 +415,9 @@ async def ralph_callback(
 
         elif request_type == "log_analysis":
             pattern = payload.get("error_pattern")
-            hours = payload.get("time_range_hours", 24)
+            if pattern is not None:
+                pattern = str(pattern)[:200]  # Limit pattern length
+            hours = max(1, min(int(payload.get("time_range_hours", 24)), 720))
 
             analysis = analyze_logs(pattern=pattern, hours=hours)
 
@@ -562,8 +566,6 @@ async def ralph_callback_info():
             "version_info"
         ],
         "authentication": "HMAC-SHA256 signature via X-Ralph-Signature header",
-        "project_id": ralph_monitor.PROJECT_ID,
         "client_version": CLIENT_VERSION,
         "app_version": APP_VERSION,
-        "configured": ralph_monitor.is_configured()
     }

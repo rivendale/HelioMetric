@@ -72,10 +72,13 @@ if PRODUCTION_ORIGIN:
     else:
         CORS_ORIGINS.append(PRODUCTION_ORIGIN)
 
-# Ralph Agent URL for CORS
+# Ralph Agent URL for CORS (apply same HTTPS enforcement as PRODUCTION_ORIGIN)
 RALPH_URL = os.getenv("RALPH_MONITOR_URL")
 if RALPH_URL:
-    CORS_ORIGINS.append(RALPH_URL)
+    if IS_PRODUCTION and not RALPH_URL.startswith("https://"):
+        logger.warning("RALPH_MONITOR_URL should use HTTPS in production. Ignoring insecure origin for CORS.")
+    else:
+        CORS_ORIGINS.append(RALPH_URL)
 
 # In production without explicit origins, log a warning
 # NOTE: Configure PRODUCTION_ORIGIN environment variable for proper CORS in production
@@ -119,24 +122,56 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Simple in-memory rate limiter per client IP."""
+    """Simple in-memory rate limiter per client IP.
+
+    Uses X-Forwarded-For when behind a reverse proxy, with periodic
+    cleanup of stale entries to prevent memory leaks.
+    """
 
     def __init__(self, app, requests_per_minute: int = 60, burst: int = 10):
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.burst = burst
         self._requests: dict[str, list[float]] = defaultdict(list)
+        self._last_cleanup = time.monotonic()
+        self._cleanup_interval = 300.0  # Clean up stale IPs every 5 minutes
+
+    def _get_client_ip(self, request: Request) -> str:
+        """Extract real client IP, considering reverse proxy headers."""
+        forwarded_for = request.headers.get("X-Forwarded-For")
+        if forwarded_for:
+            # First IP in the chain is the original client
+            return forwarded_for.split(",")[0].strip()
+        x_real_ip = request.headers.get("X-Real-IP")
+        if x_real_ip:
+            return x_real_ip.strip()
+        return request.client.host if request.client else "unknown"
+
+    def _cleanup_stale_entries(self, now: float) -> None:
+        """Remove entries for IPs that haven't sent requests recently."""
+        if now - self._last_cleanup < self._cleanup_interval:
+            return
+        self._last_cleanup = now
+        stale_ips = [
+            ip for ip, timestamps in self._requests.items()
+            if not timestamps or now - timestamps[-1] > 120.0
+        ]
+        for ip in stale_ips:
+            del self._requests[ip]
 
     async def dispatch(self, request: Request, call_next):
         # Skip rate limiting for health checks and static files
         if not request.url.path.startswith("/api"):
             return await call_next(request)
 
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = self._get_client_ip(request)
         now = time.monotonic()
         window = 60.0  # 1 minute window
 
-        # Clean old entries
+        # Periodically clean up stale IP entries to prevent memory leak
+        self._cleanup_stale_entries(now)
+
+        # Clean old entries for this IP
         self._requests[client_ip] = [
             t for t in self._requests[client_ip] if now - t < window
         ]

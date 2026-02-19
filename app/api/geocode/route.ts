@@ -67,14 +67,12 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       // Determine appropriate error response
       if (result.error?.includes('API')) {
-        return errorResponse(ErrorCodes.EXTERNAL_API_ERROR, result.error || 'Geocoding API error', {
+        return errorResponse(ErrorCodes.EXTERNAL_API_ERROR, 'Geocoding service error', {
           status: 502,
-          details: { address: trimmedAddress },
         });
       }
       return notFoundError(
-        result.error || 'No results found for this address',
-        { address: trimmedAddress }
+        result.error || 'No results found for this address'
       );
     }
 
@@ -101,10 +99,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Geocode API error:', error);
-    return internalError(
-      'Geocoding request failed',
-      { error: error instanceof Error ? error.message : 'Unknown error' }
-    );
+    return internalError('Geocoding request failed');
   }
 }
 

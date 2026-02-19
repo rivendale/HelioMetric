@@ -127,10 +127,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Location analysis error:', error);
-    return internalError(
-      'Failed to analyze location',
-      { error: error instanceof Error ? error.message : 'Unknown error' }
-    );
+    return internalError('Failed to analyze location');
   }
 }
 

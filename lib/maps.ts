@@ -69,10 +69,16 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
     url.searchParams.set('address', address);
     url.searchParams.set('key', apiKey);
 
-    const response = await fetch(url.toString());
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    const response = await fetch(url.toString(), { signal: controller.signal });
+    clearTimeout(timeout);
 
     if (!response.ok) {
-      throw new Error(`Geocoding API error: ${response.status}`);
+      return {
+        success: false,
+        error: 'Geocoding service returned an error',
+      };
     }
 
     const data = await response.json();
@@ -88,8 +94,8 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
 
     const result = data.results[0];
     const location: GeoLocation = {
-      lat: result.geometry.location.lat,
-      lng: result.geometry.location.lng,
+      lat: result.geometry?.location?.lat,
+      lng: result.geometry?.location?.lng,
       formattedAddress: result.formatted_address,
       placeId: result.place_id,
     };
@@ -106,7 +112,7 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult> {
     console.error('Geocoding error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown geocoding error',
+      error: 'Geocoding request failed',
     };
   }
 }
@@ -136,10 +142,16 @@ export async function getTimezone(
     url.searchParams.set('timestamp', ts.toString());
     url.searchParams.set('key', apiKey);
 
-    const response = await fetch(url.toString());
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    const response = await fetch(url.toString(), { signal: controller.signal });
+    clearTimeout(timeout);
 
     if (!response.ok) {
-      throw new Error(`Timezone API error: ${response.status}`);
+      return {
+        success: false,
+        error: 'Timezone service returned an error',
+      };
     }
 
     const data = await response.json();
@@ -162,7 +174,7 @@ export async function getTimezone(
     console.error('Timezone lookup error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown timezone error',
+      error: 'Timezone lookup failed',
     };
   }
 }
