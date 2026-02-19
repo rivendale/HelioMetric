@@ -192,11 +192,17 @@ async def geocode_address(address: str) -> GeocodeResult:
             cached=False
         )
 
-    except Exception as e:
-        logger.warning(f"Geocoding error: {e}")
+    except httpx.HTTPStatusError as e:
+        logger.warning(f"Geocoding HTTP error: {e.response.status_code}")
         return GeocodeResult(
             success=False,
-            error=str(e)
+            error="Geocoding service returned an error"
+        )
+    except Exception as e:
+        logger.warning(f"Geocoding error: {type(e).__name__}: {e}")
+        return GeocodeResult(
+            success=False,
+            error="Geocoding request failed"
         )
 
 
@@ -241,9 +247,15 @@ async def get_timezone(lat: float, lng: float, timestamp: Optional[int] = None) 
             dst_offset=data.get("dstOffset")
         )
 
-    except Exception as e:
-        logger.warning(f"Timezone lookup error: {e}")
+    except httpx.HTTPStatusError as e:
+        logger.warning(f"Timezone HTTP error: {e.response.status_code}")
         return TimezoneResult(
             success=False,
-            error=str(e)
+            error="Timezone service returned an error"
+        )
+    except Exception as e:
+        logger.warning(f"Timezone lookup error: {type(e).__name__}: {e}")
+        return TimezoneResult(
+            success=False,
+            error="Timezone lookup failed"
         )

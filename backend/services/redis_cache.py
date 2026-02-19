@@ -130,7 +130,7 @@ async def set_cached(key: str, value: Any, ttl_seconds: int) -> bool:
 async def _acquire_lock(client, lock_key: str, ttl: int = CacheTTL.LOCK) -> bool:
     """Acquire a distributed lock using SETNX."""
     try:
-        result = await asyncio.to_thread(client.set, lock_key, "1", {"nx": True, "ex": ttl})
+        result = await asyncio.to_thread(lambda: client.set(lock_key, "1", nx=True, ex=ttl))
         return bool(result)
     except Exception:
         return False

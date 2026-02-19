@@ -338,7 +338,9 @@ export class TimeDecoder {
 
     // Intensity based on progress through the year
     // Peaks at mid-year (around Summer Solstice)
-    const intensity = Math.sin((state.dayOfEnergeticYear / 365) * Math.PI);
+    // Clamp dayOfEnergeticYear to 0-365 to ensure valid sine curve
+    const clampedDay = Math.max(0, Math.min(365, state.dayOfEnergeticYear));
+    const intensity = Math.sin((clampedDay / 365) * Math.PI);
 
     return {
       archetype: state.yearArchetype,

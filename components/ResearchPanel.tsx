@@ -310,7 +310,7 @@ export function ResearchPanel() {
   const [input, setInput] = useState('');
   const [selectedSkill, setSelectedSkill] = useState('discuss');
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => `session_${Date.now()}`);
+  const [sessionId] = useState(() => `session_${crypto.randomUUID()}`);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { state } = useSystemState();
@@ -389,10 +389,11 @@ export function ResearchPanel() {
         setMessages((prev) => [...prev, errorMessage]);
       }
     } catch (error) {
+      console.error('Research agent error:', error);
       const errorMessage: Message = {
         id: `error_${Date.now()}`,
         role: 'assistant',
-        content: `Connection error: ${error instanceof Error ? error.message : 'Failed to reach the research agent'}`,
+        content: 'Connection error. Please try again later.',
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);

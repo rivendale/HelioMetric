@@ -105,7 +105,7 @@ export const COLOR_PHILOSOPHIES: Record<ManaColor, ColorPhilosophy> = {
  */
 
 export interface ColorRelationship {
-  type: 'ally' | 'enemy' | 'self';
+  type: 'ally' | 'enemy' | 'neutral' | 'self';
   description: string;
   tensionLevel: number; // 0-1, higher = more conflict
 }
@@ -174,7 +174,7 @@ export function getColorRelationship(colorA: ManaColor, colorB: ManaColor): Colo
 
   // Neutral (non-adjacent, non-opposite)
   return {
-    type: 'ally',
+    type: 'neutral',
     description: 'Indirect philosophical connection',
     tensionLevel: 0.5,
   };

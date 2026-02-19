@@ -17,11 +17,14 @@ Example tasks:
 import asyncio
 import json
 import os
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 import hashlib
+
+logger = logging.getLogger(__name__)
 
 try:
     from croniter import croniter
@@ -481,7 +484,7 @@ class TaskScheduler:
 
             except Exception as e:
                 # Log error but continue running
-                print(f"Scheduler error: {e}")
+                logger.error(f"Scheduler error: {e}", exc_info=True)
 
             await asyncio.sleep(POLL_INTERVAL_SECONDS)
 

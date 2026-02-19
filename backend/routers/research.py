@@ -13,10 +13,14 @@ Set RESEARCH_API_KEY environment variable to enable access.
 
 import os
 import re
+import hmac
 from typing import Optional
-from fastapi import APIRouter, HTTPException, Depends, Security
+from fastapi import APIRouter, HTTPException, Depends, Security, Query
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
+import logging
+
+logger = logging.getLogger(__name__)
 
 from services.research_agent import (
     research_agent,
@@ -47,7 +51,7 @@ async def verify_research_api_key(api_key: Optional[str] = Security(api_key_head
             status_code=503,
             detail="Research API not configured. Set RESEARCH_API_KEY environment variable."
         )
-    if not api_key or api_key != RESEARCH_API_KEY:
+    if not api_key or not hmac.compare_digest(api_key, RESEARCH_API_KEY):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
     return api_key
 
@@ -95,24 +99,24 @@ router = APIRouter(prefix="/api/research", tags=["research"], dependencies=[Depe
 
 class DiscussRequest(BaseModel):
     """Request for free-form discussion"""
-    session_id: str = Field(..., description="Session ID for conversation continuity")
-    message: str = Field(..., description="User message")
+    session_id: str = Field(..., min_length=1, max_length=256, description="Session ID for conversation continuity")
+    message: str = Field(..., min_length=1, max_length=10000, description="User message")
     context: Optional[dict] = Field(None, description="Additional context data")
 
 
 class SkillRequest(BaseModel):
     """Request to execute a specific skill"""
-    session_id: str
+    session_id: str = Field(..., min_length=1, max_length=256)
     skill_type: str = Field(..., description="One of: analyze_profile, compare_compatibility, forecast_period, research_patterns, explain_concept, generate_report, discuss")
-    message: str = Field("", description="Additional user message/prompt")
+    message: str = Field("", max_length=10000, description="Additional user message/prompt")
     context: dict = Field(default_factory=dict, description="Context data required by the skill")
 
 
 class CreateTaskRequest(BaseModel):
     """Request to create a scheduled task"""
-    task_id: str
-    name: str
-    description: str
+    task_id: str = Field(..., min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_\-]+$")
+    name: str = Field(..., min_length=1, max_length=256)
+    description: str = Field(..., min_length=1, max_length=1000)
     schedule_type: str = Field(..., description="One of: cron, interval, once")
     schedule_value: str = Field(..., description="Cron expression, interval in seconds, or ISO datetime")
     skill_type: str
@@ -193,7 +197,8 @@ async def discuss(request: DiscussRequest):
             skill_used="discuss",
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Research discuss error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal research error")
 
 
 @router.post("/skill", response_model=ResearchResponse)
@@ -234,7 +239,8 @@ async def execute_skill(request: SkillRequest):
             skill_used=request.skill_type,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Research skill error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal research error")
 
 
 @router.get("/skills")
@@ -454,7 +460,7 @@ async def run_task_now(task_id: str):
 
 
 @router.get("/tasks/{task_id}/results", response_model=list[TaskResultResponse])
-async def get_task_results(task_id: str, limit: int = 10):
+async def get_task_results(task_id: str, limit: int = Query(default=10, ge=1, le=100)):
     """Get recent execution results for a task"""
     results = task_scheduler.get_task_results(task_id, limit)
     return [
@@ -478,17 +484,17 @@ async def get_task_results(task_id: str, limit: int = 10):
 
 class DailyForecastRequest(BaseModel):
     """Request body for creating a daily forecast task"""
-    session_id: str
+    session_id: str = Field(..., min_length=1, max_length=256)
     profile_context: dict
-    hour: int = 9
+    hour: int = Field(default=9, ge=0, le=23)
 
 
 class WeeklyReportRequest(BaseModel):
     """Request body for creating a weekly report task"""
-    session_id: str
+    session_id: str = Field(..., min_length=1, max_length=256)
     subjects: list[dict]
-    day_of_week: int = 0
-    hour: int = 8
+    day_of_week: int = Field(default=0, ge=0, le=6)
+    hour: int = Field(default=8, ge=0, le=23)
 
 
 @router.post("/tasks/templates/daily-forecast", response_model=TaskResponse)

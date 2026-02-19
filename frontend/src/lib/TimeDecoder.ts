@@ -240,7 +240,8 @@ export class TimeDecoder {
     const state = this.getTemporalState(date);
     const zodiacIndex = ZODIAC_SEQUENCE.indexOf(state.yearArchetype);
     const phase = zodiacIndex * 30;
-    const intensity = Math.sin((state.dayOfEnergeticYear / 365) * Math.PI);
+    const clampedDay = Math.max(0, Math.min(365, state.dayOfEnergeticYear));
+    const intensity = Math.sin((clampedDay / 365) * Math.PI);
 
     return {
       archetype: state.yearArchetype,

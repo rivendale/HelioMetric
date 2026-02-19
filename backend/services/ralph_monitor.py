@@ -179,6 +179,9 @@ def _get(url: str, timeout: float = 10.0) -> dict:
     """
     Send authenticated GET request to Ralph.
 
+    Uses HMAC signature over the URL for authentication instead of
+    transmitting the raw secret in headers.
+
     Args:
         url: Full URL to fetch
         timeout: Request timeout in seconds
@@ -188,8 +191,10 @@ def _get(url: str, timeout: float = 10.0) -> dict:
     """
     headers = {}
     if SECRET:
-        headers["Authorization"] = f"Bearer {SECRET}"
-        headers["X-Ralph-Secret"] = SECRET
+        # Sign the URL as the payload for GET requests (never send raw secret)
+        signature = _sign_payload(url.encode())
+        if signature:
+            headers["X-Ralph-Signature"] = signature
 
     try:
         if HAS_HTTPX:
@@ -216,6 +221,9 @@ async def _get_async(url: str, timeout: float = 10.0) -> dict:
     """
     Send authenticated GET request to Ralph (async version).
 
+    Uses HMAC signature over the URL for authentication instead of
+    transmitting the raw secret in headers.
+
     Args:
         url: Full URL to fetch
         timeout: Request timeout in seconds
@@ -225,8 +233,10 @@ async def _get_async(url: str, timeout: float = 10.0) -> dict:
     """
     headers = {}
     if SECRET:
-        headers["Authorization"] = f"Bearer {SECRET}"
-        headers["X-Ralph-Secret"] = SECRET
+        # Sign the URL as the payload for GET requests (never send raw secret)
+        signature = _sign_payload(url.encode())
+        if signature:
+            headers["X-Ralph-Signature"] = signature
 
     try:
         if HAS_HTTPX:
@@ -743,11 +753,11 @@ def is_configured() -> bool:
 
 
 def get_config_status() -> dict:
-    """Get current configuration status."""
+    """Get current configuration status (redacted for safety)."""
     return {
-        "ralph_url": RALPH_URL,
-        "project_id": PROJECT_ID,
-        "callback_url": CALLBACK_URL,
+        "ralph_url_configured": bool(RALPH_URL),
+        "project_id_configured": bool(PROJECT_ID),
+        "callback_url_configured": bool(CALLBACK_URL),
         "secret_configured": bool(SECRET),
         "httpx_available": HAS_HTTPX,
         "fully_configured": is_configured() and bool(CALLBACK_URL),
